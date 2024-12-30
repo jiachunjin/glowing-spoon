@@ -96,6 +96,7 @@ def main():
             if global_step >= config.train.num_iters:
                 training_done = True
                 break
+    accelerator.end_training()
 
 
 if __name__ == '__main__':

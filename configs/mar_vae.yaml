@@ -34,4 +34,4 @@ train:
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  batch_size: 40 # to modify
+  batch_size: 45 # to modify
