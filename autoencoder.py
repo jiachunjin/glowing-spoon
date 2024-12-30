@@ -157,7 +157,9 @@ class Decoder_1D(nn.Module):
         B, K, d = latents_BKd.shape
         dtype = latents_BKd.dtype
         # get bits from logits and embed
-        latents_bin = torch.bernoulli(F.sigmoid(latents_BKd))
+        p = F.sigmoid(latents_BKd)
+        p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
+        latents_bin = p + (p_ - p).detach()
         x_BKD = self.input(latents_bin)
 
         x_BKD = x_BKD + self.latents_pos_embed.to(dtype)
