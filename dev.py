@@ -27,7 +27,10 @@ def test_multi_level_interpolation(vae):
     img = img * 2 - 1
 
     levels = [1, 2, 3, 4, 5, 6, 8, 10, 13, 16]
-    vae.get_multi_level_features(img, levels)
+    h, t = vae.get_multi_level_features(img, levels)
+    print(h[0])
+
+    return h, t
 
 if __name__ == '__main__':
     test_multi_level_interpolation(vae)

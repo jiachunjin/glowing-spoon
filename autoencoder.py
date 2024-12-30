@@ -123,7 +123,7 @@ class Decoder_1D(nn.Module):
                 neighbours.append(self.recon_length+i)
             cur_left += l * l
             attn_pair.append(neighbours)
-        attn_mask = create_decoder_attn_mask(attn_pair, attn_size).reshape(1, 1, attn_size, attn_size)
+        attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length).reshape(1, 1, attn_size, attn_size)
         self.register_buffer('attn_mask', attn_mask.contiguous())
 
         # 3. transformer
@@ -152,7 +152,7 @@ class Decoder_1D(nn.Module):
         mask_tokens = self.mask_tokens.unsqueeze(0).expand(B, -1, -1)
         mask_tokens = mask_tokens + self.pos_embed.to(dtype)
 
-        x = torch.cat([x_BKD, mask_tokens], dim=1) # (B, recon_length+K, D)
+        x = torch.cat([mask_tokens, x_BKD], dim=1) # (B, recon_length+K, D)
         x = self.norm_pre(x)
         for _, block in enumerate(self.transformer):
             x = block(x, attn_bias=self.attn_mask)
