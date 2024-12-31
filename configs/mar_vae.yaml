@@ -23,16 +23,17 @@ autoencoder:
 train:
   resume_path: 'experiment/distill_MAR_VAE/AE-distill_MAR_VAE-6k'
   global_step: 6001
-  exp_name: &exp_name 'distill_continuous'
+  exp_name: &exp_name 'distill_MAR_VAE'
   wandb_proj: *exp_name
-  output_dir: *exp_name
+  # output_dir: *exp_name
+  output_dir: 'distill_continuous'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
-  report_to: 'no'
-  num_iters: 50000
+  report_to: 'wandb'
+  num_iters: 10000
   # val_every: 10
-  save_every: 2000
+  save_every: 1000
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'

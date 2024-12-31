@@ -108,19 +108,7 @@ class Decoder_1D(nn.Module):
 
         # 2. positional embeddings
         n = self.recon_levels[-1]
-        pos_embed_full = nn.Parameter(scale * torch.randn(1, n ** 2, self.embed_dim))
-        dtype = pos_embed_full.dtype
-        pos_embed_full = pos_embed_full.float()  # interpolate needs float32
-        pos_embed_full_square = pos_embed_full.reshape(1, n, n, self.embed_dim).permute(0, 3, 1, 2)
-        pos_embed_all = []
-        for level in self.recon_levels[:-1]:
-            pos_embed = F.interpolate(pos_embed_full_square, size=(level, level), mode='bicubic', align_corners=False)
-            pos_embed = pos_embed.permute(0, 2, 3, 1).flatten(1, 2)
-            pos_embed_all.append(pos_embed)
-        pos_embed_all.append(pos_embed_full)
-        pos_embed_all = torch.cat(pos_embed_all, dim=1)
-        self.pos_embed = nn.Parameter(pos_embed_all.to(dtype))
-
+        self.pos_embed_full = nn.Parameter(scale * torch.randn(1, n ** 2, self.embed_dim))
         self.latents_pos_embed = nn.Parameter(scale * torch.randn(self.num_latents, self.embed_dim))
 
         # 2. mask tokens
@@ -173,7 +161,20 @@ class Decoder_1D(nn.Module):
         mask_tokens = torch.cat([
             self.mask_tokens[i].repeat(self.recon_levels[i] ** 2, 1) for i in range(len(self.recon_levels))
         ], dim=0).unsqueeze(0).expand(B, -1, -1)
-        mask_tokens = mask_tokens + self.pos_embed.to(mask_tokens.device, dtype)
+
+        # get interpolated position embeddings for each level
+        n = self.recon_levels[-1]
+        dtype = self.pos_embed_full.dtype
+        pos_embed_full = self.pos_embed_full.float()  # interpolate needs float32
+        pos_embed_full_square = pos_embed_full.reshape(1, n, n, self.embed_dim).permute(0, 3, 1, 2)
+        pos_embed_all = []
+        for level in self.recon_levels[:-1]:
+            pos_embed = F.interpolate(pos_embed_full_square, size=(level, level), mode='bicubic', align_corners=False)
+            pos_embed = pos_embed.permute(0, 2, 3, 1).flatten(1, 2)
+            pos_embed_all.append(pos_embed)
+        pos_embed_all.append(pos_embed_full)
+        pos_embed_all = torch.cat(pos_embed_all, dim=1)
+        mask_tokens = mask_tokens + pos_embed_all.to(mask_tokens.device, dtype)
 
         x = torch.cat([mask_tokens, x_BKD], dim=1) # (B, recon_length+K, D)
         x = self.norm_pre(x)
