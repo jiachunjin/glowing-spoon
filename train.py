@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 from accelerate import Accelerator
 from accelerate.utils import ProjectConfiguration
 
-from utils import get_dataloader, flatten_dict
+from utils import get_dataloader, flatten_dict, get_loss_per_level, get_loss_weighting
 
 def get_models(config):
     from autoencoder import Autoencoder_1D
@@ -41,6 +41,8 @@ def main():
 
     if config.train.resume_path is not None:
         ckpt = torch.load(config.train.resume_path, map_location='cpu')
+        skipped_keys = ['encoder.output.weight', 'encoder.output.bias', 'decoder.input.weight', 'decoder.input.bias']
+        ckpt = {k: v for k, v in ckpt.items() if k not in skipped_keys}
         m, u = autoencoder.load_state_dict(ckpt, strict=False)
         print('missing: ', m)
         print('unexpected: ', u)
@@ -72,6 +74,8 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
+    lw = get_loss_weighting(config.autoencoder.decoder.recon_levels).to(accelerator.device) # (L,)
+
     while not training_done:
         for x, y in dataloader:
             autoencoder.train()
@@ -79,20 +83,26 @@ def main():
                 with torch.no_grad():
                     features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels)
                 recons = autoencoder(features_Bld)
-                loss = F.mse_loss(recons, targets_BLd, reduction='mean')
+                loss = F.mse_loss(recons, targets_BLd, reduction='none')
+                loss_per_element = loss.mean(dim=[0,2]) # (B, L)
+                weighted_loss = loss_per_element * lw
 
                 optimizer.zero_grad()
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
                 
-                accelerator.backward(loss)
+                accelerator.backward(weighted_loss.mean())
                 optimizer.step()
 
             if accelerator.sync_gradients:
                 global_step += 1
                 progress_bar.update(1)
-                loss = accelerator.gather(loss.detach()).mean().item()
+                loss = accelerator.gather(loss.detach())
+                loss_per_level = get_loss_per_level(loss, config.autoencoder.decoder.recon_levels)
+                loss = loss.mean().item()
                 logs = {'loss': loss}
+                for i, loss_pl in enumerate(loss_per_level):
+                    logs[f'loss_{i}'] = loss_pl
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
