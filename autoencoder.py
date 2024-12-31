@@ -99,7 +99,7 @@ class Decoder_1D(nn.Module):
         self.num_latents = config.num_latents
         self.recon_levels = config.recon_levels
         self.recon_length = sum(pn ** 2 for pn in self.recon_levels)
-        attn_size = self.recon_length + self.recon_levels[-1] ** 2
+        attn_size = self.recon_length + self.num_latents
         scale = self.embed_dim ** -0.5
         print(f'Decoder binary_mode: {self.binary_mode}')
 
@@ -125,6 +125,8 @@ class Decoder_1D(nn.Module):
                 neighbours.append(self.recon_length+i)
             cur_left += l * l
             attn_pair.append(neighbours)
+            if l == self.recon_levels[-1]:
+                neighbours += list(range(self.recon_length+i, self.recon_length + self.num_latents))
         attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length).reshape(1, 1, attn_size, attn_size)
         self.register_buffer('attn_mask', attn_mask.contiguous())
 
