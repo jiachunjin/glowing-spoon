@@ -39,6 +39,14 @@ def main():
     dataloader = get_dataloader(config.data)
     global_step = config.train.global_step if config.train.global_step is not None else 0
 
+    if config.train.resume_path is not None:
+        ckpt = torch.load(config.train.resume_path, map_location='cpu')
+        m, u = autoencoder.load_state_dict(ckpt, strict=False)
+        print('missing: ', m)
+        print('unexpected: ', u)
+        if accelerator.is_main_process:
+            print(f'AE ckpt loaded from {config.train.resume_path}')
+
     params_to_learn = list(autoencoder.parameters())
     optimizer = torch.optim.AdamW(
         params_to_learn,
@@ -88,10 +96,22 @@ def main():
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
+            # if global_step > 0 and global_step % config.train.val_every == 0 and accelerator.is_main_process:
+            #     from einops import rearrange
+            #     from PIL import Image
+            #     from torchvision.transforms import ToTensor, ToPILImage
+            #     with torch.no_grad():
+            #         rec = rearrange(recons[:, -256:, :], 'b (h w) c -> b c h w', h=16)
+            #         rec = vae.decode(rec).detach().cpu()
+            #         rec = torch.clamp((rec + 1) / 2, 0, 1)
+            #         img = ToPILImage()(rec[0])
+            #         img.save(os.path.join(output_dir, f"AE-{config.train.exp_name}-{global_step}.png"))
+
             if global_step > 0 and global_step % config.train.save_every == 0 and accelerator.is_main_process:
                 autoencoder.eval()
                 state_dict = accelerator.unwrap_model(autoencoder).state_dict()
                 torch.save(state_dict, os.path.join(output_dir, f"AE-{config.train.exp_name}-{global_step // 1000}k"))
+            accelerator.wait_for_everyone()
 
             if global_step >= config.train.num_iters:
                 training_done = True

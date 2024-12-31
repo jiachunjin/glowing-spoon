@@ -89,6 +89,7 @@ class Decoder_1D(nn.Module):
         super().__init__()
         # 0. hyper parameters
         self.config = config
+        self.binary_mode = config.binary_mode
         self.embed_dim = config.embed_dim
         self.vae_dim = config.vae_dim
         self.input_dim = config.input_dim # the dim of the latents
@@ -100,6 +101,7 @@ class Decoder_1D(nn.Module):
         self.recon_length = sum(pn ** 2 for pn in self.recon_levels)
         attn_size = self.recon_length + self.recon_levels[-1] ** 2
         scale = self.embed_dim ** -0.5
+        print(f'Decoder binary_mode: {self.binary_mode}')
 
         # 1. input latent logits
         self.input = nn.Linear(self.input_dim, self.embed_dim)
@@ -117,7 +119,7 @@ class Decoder_1D(nn.Module):
             pos_embed_all.append(pos_embed)
         pos_embed_all.append(pos_embed_full)
         pos_embed_all = torch.cat(pos_embed_all, dim=1)
-        self.pos_embed = pos_embed_all.to(dtype)
+        self.pos_embed = nn.Parameter(pos_embed_all.to(dtype))
 
         self.latents_pos_embed = nn.Parameter(scale * torch.randn(self.num_latents, self.embed_dim))
 
@@ -156,11 +158,15 @@ class Decoder_1D(nn.Module):
         """
         B, K, d = latents_BKd.shape
         dtype = latents_BKd.dtype
-        # get bits from logits and embed
-        p = F.sigmoid(latents_BKd)
-        p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
-        latents_bin = p + (p_ - p).detach()
-        x_BKD = self.input(latents_bin)
+        if self.binary_mode:
+            # get bits from logits and embed
+            p = F.sigmoid(latents_BKd)
+            p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
+            latents_bin = p + (p_ - p).detach()
+            x_BKD = self.input(latents_bin)
+        else:
+            # use continuous latent for experimental purpose
+            x_BKD = self.input(latents_BKd)
 
         x_BKD = x_BKD + self.latents_pos_embed.to(dtype)
         
