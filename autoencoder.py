@@ -89,6 +89,7 @@ class Decoder_1D(nn.Module):
         super().__init__()
         # 0. hyper parameters
         self.config = config
+        self.residual = config.residual
         self.binary_mode = config.binary_mode
         self.embed_dim = config.embed_dim
         self.vae_dim = config.vae_dim
@@ -116,18 +117,33 @@ class Decoder_1D(nn.Module):
         self.mask_tokens = nn.Parameter(scale * torch.randn(len(self.recon_levels), self.embed_dim))
         # register buffer for the attn mask
         attn_pair = []
-        cur_left = 0
-        for l in self.recon_levels:
-            neighbours = []
-            for i in range(l * l):
-                neighbours.append(cur_left + i)
-            for i in range(l * l):
-                neighbours.append(self.recon_length+i)
-            cur_left += l * l
-            attn_pair.append(neighbours)
-            if l == self.recon_levels[-1]:
-                neighbours += list(range(self.recon_length+i, self.recon_length + self.num_latents))
-        attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length).reshape(1, 1, attn_size, attn_size)
+        if not self.residual:
+            cur_left = 0
+            for l in self.recon_levels:
+                neighbours = []
+                for i in range(l * l):
+                    neighbours.append(cur_left + i)
+                for i in range(l * l):
+                    neighbours.append(self.recon_length+i)
+                cur_left += l * l
+                attn_pair.append(neighbours)
+                if l == self.recon_levels[-1]:
+                    neighbours += list(range(self.recon_length+i, self.recon_length + self.num_latents))
+            attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length, residual=False).reshape(1, 1, attn_size, attn_size)
+        else:
+            assert self.num_latents == self.recon_length, 'if residual, then num_latents should be equal to recon_length'
+            cur_left = 0
+            cur_right = self.recon_length
+            for l in self.recon_levels:
+                neighbours = []
+                for i in range(l * l):
+                    neighbours.append(cur_left + i)
+                for i in range(l * l):
+                    neighbours.append(cur_right+i)
+                cur_left += l * l
+                cur_right += l * l
+                attn_pair.append(neighbours)
+            attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length, residual=True).reshape(1, 1, attn_size, attn_size)
         self.register_buffer('attn_mask', attn_mask.contiguous())
 
         # 3. transformer

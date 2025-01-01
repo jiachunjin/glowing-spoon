@@ -485,15 +485,29 @@ class AutoencoderKL(nn.Module):
         dec = self.decoder(z)
         return dec
     
-    def get_multi_level_features(self, x, levels):
+    def get_multi_level_features(self, x, levels, residual):
         posterior = self.encode(x)
         h = posterior.mode()
         B, C, H, W = h.shape
         output = []
-        for level in levels:
-            h_ = F.interpolate(h, size=(level, level), mode='area')
-            h_ = rearrange(h_, 'b c h w -> b (h w) c')
-            output.append(h_)
+        if residual:
+            pre_h = None
+            for level in levels:
+                if pre_h is None:
+                    # 1x1 scale
+                    h_ = F.interpolate(h, size=(level, level), mode='area')
+                    pre_h = h_
+                else:
+                    cur_h = F.interpolate(h, size=(level, level), mode='area')
+                    h_ = cur_h - F.interpolate(pre_h, size=(level, level), mode='area')
+                    pre_h = cur_h
+                h_ = rearrange(h_, 'b c h w -> b (h w) c')
+                output.append(h_)
+        else:
+            for level in levels:
+                h_ = F.interpolate(h, size=(level, level), mode='area')
+                h_ = rearrange(h_, 'b c h w -> b (h w) c')
+                output.append(h_)
         output = torch.cat(output, dim=1)
 
         return rearrange(h, 'b c h w -> b (h w) c'), output

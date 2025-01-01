@@ -41,7 +41,7 @@ def main():
 
     if config.train.resume_path is not None:
         ckpt = torch.load(config.train.resume_path, map_location='cpu')
-        skipped_keys = ['encoder.output.weight', 'encoder.output.bias', 'decoder.input.weight', 'decoder.input.bias']
+        skipped_keys = ['encoder.latents', 'decoder.latents_pos_embed', 'decoder.attn_mask']
         ckpt = {k: v for k, v in ckpt.items() if k not in skipped_keys}
         m, u = autoencoder.load_state_dict(ckpt, strict=False)
         print('missing: ', m)
@@ -81,11 +81,14 @@ def main():
             autoencoder.train()
             with accelerator.accumulate([autoencoder]):
                 with torch.no_grad():
-                    features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels)
+                    features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels, config.residual)
                 recons = autoencoder(features_Bld)
                 loss = F.mse_loss(recons, targets_BLd, reduction='none')
                 loss_per_element = loss.mean(dim=[0,2]) # (B, L)
-                weighted_loss = loss_per_element * lw
+                if not config.residual:
+                    weighted_loss = loss_per_element * lw
+                else:
+                    weighted_loss = loss_per_element
 
                 optimizer.zero_grad()
                 if accelerator.sync_gradients:

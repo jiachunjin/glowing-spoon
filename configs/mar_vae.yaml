@@ -1,7 +1,8 @@
+residual: &residual true
 autoencoder:
   binary_dim: &binary_dim 16
   vae_dim: &vae_dim 16
-  num_latents: &num_latents 300
+  num_latents: &num_latents 680
   encoder:
     vae_dim: *vae_dim
     embed_dim: 512
@@ -11,6 +12,7 @@ autoencoder:
     output_dim: *binary_dim
 
   decoder:
+    residual: *residual
     binary_mode: true
     vae_dim: *vae_dim
     embed_dim: 512
@@ -21,20 +23,20 @@ autoencoder:
     recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
 
 train:
-  resume_path:
+  resume_path: 'experiment/425x16_bin/AE-distill_MAR_VAE-60k' 
   global_step:
   exp_name: &exp_name 'distill_MAR_VAE'
   wandb_proj: *exp_name
   # output_dir: *exp_name
-  output_dir: '300x16_bin'
+  output_dir: '680x16_residual_bin'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
   report_to: 'wandb'
-  num_iters: 50000
+  num_iters: 80000
   # val_every: 10
   save_every: 5000
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  batch_size: 50 # to modify
+  batch_size: 45 # to modify

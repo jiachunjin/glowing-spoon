@@ -6,7 +6,7 @@ from torch.nn.functional import scaled_dot_product_attention
 from itertools import combinations
 
 
-def create_decoder_attn_mask(attn_pair, N, L):
+def create_decoder_attn_mask(attn_pair, N, L, residual=False):
     mask = torch.full((N, N), float('-inf'))  # 初始化为 -inf
     # 遍历 attn_pair 列表
     for pair in attn_pair:
@@ -19,6 +19,9 @@ def create_decoder_attn_mask(attn_pair, N, L):
         # 自注意力
         for i in pair:
             mask[i, i] = 0  # 自身注意力
+        
+        if residual:
+            mask[L:, L:] = 0
     return mask
 
 
