@@ -491,16 +491,23 @@ class AutoencoderKL(nn.Module):
         B, C, H, W = h.shape
         output = []
         if residual:
-            pre_h = None
+            # first way of residual decomposition
+            # pre_h = None
+            # for level in levels:
+            #     if pre_h is None:
+            #         # 1x1 scale
+            #         h_ = F.interpolate(h, size=(level, level), mode='area')
+            #         pre_h = h_
+            #     else:
+            #         cur_h = F.interpolate(h, size=(level, level), mode='area')
+            #         h_ = cur_h - F.interpolate(pre_h, size=(level, level), mode='area')
+            #         pre_h = cur_h
+            
+            # second way of residual decomposition
+            res = h
             for level in levels:
-                if pre_h is None:
-                    # 1x1 scale
-                    h_ = F.interpolate(h, size=(level, level), mode='area')
-                    pre_h = h_
-                else:
-                    cur_h = F.interpolate(h, size=(level, level), mode='area')
-                    h_ = cur_h - F.interpolate(pre_h, size=(level, level), mode='area')
-                    pre_h = cur_h
+                h_ = F.interpolate(res, size=(level, level), mode='area')
+                res = res - F.interpolate(h_, size=(H, W), mode='area')
                 h_ = rearrange(h_, 'b c h w -> b (h w) c')
                 output.append(h_)
         else:

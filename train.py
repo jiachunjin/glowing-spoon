@@ -5,8 +5,9 @@ from tqdm.auto import tqdm
 from omegaconf import OmegaConf
 from accelerate import Accelerator
 from accelerate.utils import ProjectConfiguration
+from einops import rearrange
 
-from utils import get_dataloader, flatten_dict, get_loss_per_level, get_loss_weighting
+from utils import get_dataloader, flatten_dict, get_loss_per_level, get_loss_weighting, get_residual_summation
 
 def get_models(config):
     from autoencoder import Autoencoder_1D
@@ -41,8 +42,9 @@ def main():
 
     if config.train.resume_path is not None:
         ckpt = torch.load(config.train.resume_path, map_location='cpu')
-        skipped_keys = ['encoder.latents', 'decoder.latents_pos_embed', 'decoder.attn_mask']
-        ckpt = {k: v for k, v in ckpt.items() if k not in skipped_keys}
+        # skipped_keys = ['encoder.latents', 'decoder.latents_pos_embed', 'decoder.attn_mask']
+        if config.train.skipped_keys:
+            ckpt = {k: v for k, v in ckpt.items() if k not in config.train.skipped_keys}
         m, u = autoencoder.load_state_dict(ckpt, strict=False)
         print('missing: ', m)
         print('unexpected: ', u)
@@ -89,6 +91,10 @@ def main():
                     weighted_loss = loss_per_element * lw
                 else:
                     weighted_loss = loss_per_element
+                    residual_summation = get_residual_summation(recons, config.autoencoder.decoder.recon_levels)
+                    features = rearrange(features_Bld, 'b (h w) c -> b c h w', h=16)
+                    complete_loss = F.mse_loss(residual_summation, features)
+                    weighted_loss += complete_loss
 
                 optimizer.zero_grad()
                 if accelerator.sync_gradients:
@@ -106,6 +112,9 @@ def main():
                 logs = {'loss': loss}
                 for i, loss_pl in enumerate(loss_per_level):
                     logs[f'loss_{i}'] = loss_pl
+                if config.residual:
+                    complete_loss = accelerator.gather(complete_loss.detach()).mean().item()
+                    logs['complete_loss'] = complete_loss
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 

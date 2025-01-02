@@ -1,7 +1,9 @@
 import torch
 import webdataset as wds
+import torch.nn.functional as F
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from einops import rearrange
 
 
 def get_dataloader(config):
@@ -53,3 +55,29 @@ def get_loss_weighting(levels=[1, 2, 3, 4, 5, 6, 8, 10, 13, 16]):
         weight[curr_idx:curr_idx+level**2] = level ** 2
         curr_idx += level**2
     return weight / levels[-1]**2
+
+def get_residual_summation(recons, levels):
+    B = recons.shape[0]
+    cur_idx = 0
+
+    # first way of residual summation
+    # prev_h = None
+    # for level in levels:
+    #     cur_h = rearrange(recons[:, cur_idx:cur_idx+level**2], 'b (h w) c -> b c h w', h=level)
+    #     if prev_h is not None:
+    #         cur_h += F.interpolate(prev_h, size=(level, level), mode='area')
+    #     cur_idx += level**2
+    #     prev_h = cur_h
+
+    # another way of residual summation
+    f = torch.zeros((B, 16, 16, 16)).to(recons.device)
+    for level in levels:
+        cur_h = rearrange(recons[:, cur_idx:cur_idx+level**2], 'b (h w) c -> b c h w', h=level)
+        up_h = F.interpolate(cur_h, size=(16, 16), mode='area')
+        f += up_h
+        
+        cur_idx += level**2
+        
+    return f
+
+    return cur_h
