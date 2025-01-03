@@ -1,9 +1,9 @@
 residual: &residual true
 autoencoder:
+  pretrained_ckpt_path: 'experiment/680x16_residual_bin/AE-distill_MAR_VAE-60k'
   binary_dim: &binary_dim 16
   vae_dim: &vae_dim 16
   num_latents: &num_latents 680
-  matryoshka: true
   encoder:
     vae_dim: *vae_dim
     embed_dim: 512
@@ -22,33 +22,53 @@ autoencoder:
     num_heads: 8
     input_dim: *binary_dim
     recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
+
+gpt:
+  dim: 768
+  n_layer: 12
+  n_head: 12
+  n_kv_head:
+  multiple_of: 256
+  ffn_dim_multiplier:
+  rope_base: 10000
+  norm_eps: 1e-5
+  initializer_range: 0.02
   
-  decoder_matryoshka:
-    binary_mode: true
-    vae_dim: *vae_dim
-    embed_dim: 512
-    num_layers: 8
-    num_latents: *num_latents
-    num_heads: 8
-    input_dim: *binary_dim
+  token_dropout_p: 0.1
+  attn_dropout_p: 0.0
+  resid_dropout_p: 0.1
+  ffn_dropout_p: 0.1
+  drop_path_rate: 0.0
+
+  num_classes: 1000
+  caption_dim: 2048
+  class_dropout_prob: 0.1
+  model_type: 'c2i'
+
+  vocab_size: 16384
+  cls_token_num: 1
+  block_size: 256
+  max_batch_size: 32
+  max_seq_len: 2048
+
+  input_dim: 16
+  recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
 
 train:
-  resume_path: 'experiment/distill_matryoshka_680x16/AE-distill_MAR_VAE-5k'
+  resume_path:
   skipped_keys:
-  # skipped_keys: ['decoder.mask_tokens', 'encoder.latents', 'decoder.latents_pos_embed']
-  global_step: 5001
-  exp_name: &exp_name 'distill_MAR_VAE'
+  global_step: 0
+  exp_name: &exp_name 'gpt_newtok'
   wandb_proj: *exp_name
-  # output_dir: *exp_name
-  output_dir: 'distill_matryoshka_680x16'
+  output_dir: *exp_name
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
-  report_to: 'wandb'
+  report_to: 'no'
   num_iters: 50000
-  # val_every: 10
   save_every: 5000
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  batch_size: 60 # to modify
+  batch_size: 40 # to modify
+

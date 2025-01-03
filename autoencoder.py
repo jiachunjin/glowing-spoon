@@ -8,16 +8,23 @@ class Autoencoder_1D(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.matryoshka = config.matryoshka
         self.encoder = Encoder_1D(config.encoder)
-        self.decoder = Decoder_1D(config.decoder)
+        if self.matryoshka:
+            self.decoder = Decoder_1D_Matryoshka(config.decoder_matryoshka)
+        else:
+            self.decoder = Decoder_1D(config.decoder)
     
-    def forward(self, x_BLD: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_BLD: torch.Tensor, num_activated_latent=None) -> torch.Tensor:
         """
         x_BLD: vae features, L should be 256 for 16x16
         return: reconstructed vae features for all the levels
         """
+        if num_activated_latent is not None:
+            assert self.matryoshka, 'num_activated_latent should be None if not matryoshka'
+            assert not self.training, 'num_activated_latent should be None if training'
         latents = self.encoder(x_BLD)
-        recons = self.decoder(latents)
+        recons = self.decoder(latents, num_activated_latent=num_activated_latent)
         return recons
     
     def get_probs_and_bits(self, x_BLD: torch.Tensor) -> torch.Tensor:
@@ -220,7 +227,104 @@ class Decoder_1D(nn.Module):
         recons = self.output(recons)
         
         return recons
+
+
+class Decoder_1D_Matryoshka(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        # 0. hyper parameters
+        self.config = config
+        self.binary_mode = config.binary_mode
+        self.embed_dim = config.embed_dim
+        self.vae_dim = config.vae_dim
+        self.input_dim = config.input_dim # the dim of the latents
+        self.output_dim = config.input_dim # the dim of the latents
+        self.num_layers = config.num_layers
+        self.num_heads = config.num_heads
+        self.num_latents = config.num_latents
+        self.recon_length = 256
+        scale = self.embed_dim ** -0.5
+
+        # 1. input latent logits
+        self.input = nn.Linear(self.input_dim, self.embed_dim)
+
+        # 2. positional embeddings
+        self.pos_embed_full = nn.Parameter(scale * torch.randn(1, 256, self.embed_dim))
+        self.latents_pos_embed = nn.Parameter(scale * torch.randn(self.num_latents, self.embed_dim))
+
+        # 2. mask tokens
+        # one token for 16x16
+        self.mask_tokens = nn.Parameter(scale * torch.randn(1, self.embed_dim))
+        # register buffer for the attn mask
+        # currently only test use 256 latents to reconstruct 16x16, thus no mask used
+
+        # 3. transformer
+        self.norm_pre = nn.LayerNorm(self.embed_dim)
+        self.transformer = nn.ModuleList([
+            SelfAttnBlock(self.embed_dim, self.num_heads, mlp_ratio=4.0)
+            for _ in range(self.num_layers)
+        ])
+
+        # 4. output latents
+        self.norm_post = nn.LayerNorm(self.embed_dim)
+        self.output = nn.Linear(self.embed_dim, self.vae_dim)
+
+    def forward(self, latents_BKd: torch.Tensor, decode_bits=False, num_activated_latent=None) -> torch.Tensor:
+        """
+        latents_BKd: (B, K, d), output of the encoder, should be logits for Bernoulli
+        return: (B, recon_length, vae_dim), reconstructed VAE feature map
+        """
+        B, K, d = latents_BKd.shape
+        dtype = latents_BKd.dtype
+        if not decode_bits:
+            if self.binary_mode:
+                # get bits from logits and embed
+                p = F.sigmoid(latents_BKd)
+                p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
+                latents_bin = p + (p_ - p).detach()
+                x_BKD = self.input(latents_bin)
+            else:
+                # use continuous latent for experimental purpose
+                x_BKD = self.input(latents_BKd)
+        else:
+            assert self.training == False, 'cannot decode bits in training mode'
+            x_BKD = self.input(latents_BKd)
+
+        x_BKD = x_BKD + self.latents_pos_embed.to(dtype)
         
+        mask_tokens = self.mask_tokens.repeat(256, 1).unsqueeze(0).expand(B, -1, -1)
+        mask_tokens = mask_tokens + self.pos_embed_full.to(mask_tokens.device, dtype)
+
+        latent_len = K
+        num_mask_token = self.recon_length
+        if self.training:
+            assert num_activated_latent is None, 'num_activated_latent should be None in training mode'
+            num_activated_latent = torch.randint(1, latent_len+1, (B,))
+        else:
+            if num_activated_latent is None:
+                num_activated_latent = torch.tensor(latent_len).repeat(B).to(latents_BKd.device)
+            else:
+                num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
+            print("Inference mode", num_activated_latent)
+        L = num_mask_token + K
+        attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
+        attn_mask[:, :, num_mask_token:, num_mask_token:] = 0
+        attn_mask[:, :, :num_mask_token, :num_mask_token] = 0
+        for i in range(B):
+            Ni = num_activated_latent[i].item()
+            attn_mask[i, :, :num_mask_token, num_mask_token:num_mask_token+Ni] = 0
+
+        x = torch.cat([mask_tokens, x_BKD], dim=1) # (B, recon_length+K, D)
+        x = self.norm_pre(x)
+        for _, block in enumerate(self.transformer):
+            x = block(x, attn_bias=attn_mask) # no mask for now
+        
+        recons = x[:, :self.recon_length]
+        recons = self.norm_post(recons)
+        recons = self.output(recons)
+        
+        return recons
+
 
 if __name__ == '__main__':
     from omegaconf import OmegaConf

@@ -84,10 +84,16 @@ def main():
             with accelerator.accumulate([autoencoder]):
                 with torch.no_grad():
                     features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels, config.residual)
+                    if config.autoencoder.matryoshka:
+                        targets = features_Bld
+                    else:
+                        targets = targets_BLd
                 recons = autoencoder(features_Bld)
-                loss = F.mse_loss(recons, targets_BLd, reduction='none')
+                loss = F.mse_loss(recons, targets, reduction='none')
                 loss_per_element = loss.mean(dim=[0,2]) # (B, L)
-                if not config.residual:
+                if config.autoencoder.matryoshka:
+                    weighted_loss = loss_per_element
+                elif not config.residual:
                     weighted_loss = loss_per_element * lw
                 else:
                     weighted_loss = loss_per_element
@@ -107,14 +113,15 @@ def main():
                 global_step += 1
                 progress_bar.update(1)
                 loss = accelerator.gather(loss.detach())
-                loss_per_level = get_loss_per_level(loss, config.autoencoder.decoder.recon_levels)
                 loss = loss.mean().item()
                 logs = {'loss': loss}
-                for i, loss_pl in enumerate(loss_per_level):
-                    logs[f'loss_{i}'] = loss_pl
-                if config.residual:
-                    complete_loss = accelerator.gather(complete_loss.detach()).mean().item()
-                    logs['complete_loss'] = complete_loss
+                if not config.autoencoder.matryoshka:
+                    loss_per_level = get_loss_per_level(loss, config.autoencoder.decoder.recon_levels)
+                    for i, loss_pl in enumerate(loss_per_level):
+                        logs[f'loss_{i}'] = loss_pl
+                    if config.residual:
+                        complete_loss = accelerator.gather(complete_loss.detach()).mean().item()
+                        logs['complete_loss'] = complete_loss
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
