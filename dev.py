@@ -49,7 +49,7 @@ def reconstruct_validation():
     config = OmegaConf.load('configs/mar_vae.yaml')
 
     autoencoder = Autoencoder_1D(config.autoencoder)
-    ckpt = torch.load('experiment/680x16_residual_bin/AE-distill_MAR_VAE-60k', map_location='cpu')
+    ckpt = torch.load('experiment/680x16_residual_bin/AE-distill_MAR_VAE-60k', map_location='cpu') # rFID = 2.6283
     autoencoder.load_state_dict(ckpt, strict=True)
     autoencoder.eval();
     vae = vae.to(device)

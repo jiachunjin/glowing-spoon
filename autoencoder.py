@@ -19,6 +19,18 @@ class Autoencoder_1D(nn.Module):
         latents = self.encoder(x_BLD)
         recons = self.decoder(latents)
         return recons
+    
+    def get_probs_and_bits(self, x_BLD: torch.Tensor) -> torch.Tensor:
+        latents = self.encoder(x_BLD)
+        probs = F.sigmoid(latents)
+        bits = torch.bernoulli(probs)
+
+        return probs, bits
+    
+    def decode_bits(self, bits: torch.Tensor) -> torch.Tensor:
+        recons = self.decoder(bits, decode_bits=True)
+        return recons
+
 
 
 class Encoder_1D(nn.Module):
@@ -157,21 +169,25 @@ class Decoder_1D(nn.Module):
         self.norm_post = nn.LayerNorm(self.embed_dim)
         self.output = nn.Linear(self.embed_dim, self.vae_dim)
 
-    def forward(self, latents_BKd: torch.Tensor) -> torch.Tensor:
+    def forward(self, latents_BKd: torch.Tensor, decode_bits=False) -> torch.Tensor:
         """
         latents_BKd: (B, K, d), output of the encoder, should be logits for Bernoulli
         return: (B, recon_length, vae_dim), reconstructed VAE feature map
         """
         B, K, d = latents_BKd.shape
         dtype = latents_BKd.dtype
-        if self.binary_mode:
-            # get bits from logits and embed
-            p = F.sigmoid(latents_BKd)
-            p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
-            latents_bin = p + (p_ - p).detach()
-            x_BKD = self.input(latents_bin)
+        if not decode_bits:
+            if self.binary_mode:
+                # get bits from logits and embed
+                p = F.sigmoid(latents_BKd)
+                p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
+                latents_bin = p + (p_ - p).detach()
+                x_BKD = self.input(latents_bin)
+            else:
+                # use continuous latent for experimental purpose
+                x_BKD = self.input(latents_BKd)
         else:
-            # use continuous latent for experimental purpose
+            assert self.training == False, 'cannot decode bits in training mode'
             x_BKD = self.input(latents_BKd)
 
         x_BKD = x_BKD + self.latents_pos_embed.to(dtype)

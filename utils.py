@@ -68,6 +68,8 @@ def get_residual_summation(recons, levels):
     #         cur_h += F.interpolate(prev_h, size=(level, level), mode='area')
     #     cur_idx += level**2
     #     prev_h = cur_h
+    
+    # return cur_h
 
     # another way of residual summation
     f = torch.zeros((B, 16, 16, 16)).to(recons.device)
@@ -80,4 +82,5 @@ def get_residual_summation(recons, levels):
         
     return f
 
-    return cur_h
+def bernoulli_entropy(p):
+    return -p * torch.log(torch.clip(p, 1e-10, 1)) - (1 - p) * torch.log(torch.clip(1 - p, 1e-10, 1))
