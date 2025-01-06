@@ -1,4 +1,5 @@
 import os
+import argparse
 import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
@@ -33,8 +34,8 @@ def get_accelerator(config):
 
     return accelerator, output_dir
 
-def main():
-    config = OmegaConf.load('configs/mar_vae.yaml')
+def main(config_path):
+    config = OmegaConf.load(config_path)
     accelerator, output_dir = get_accelerator(config.train)
     autoencoder, vae = get_models(config.autoencoder)
     dataloader = get_dataloader(config.data)
@@ -76,17 +77,17 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
-    lw = get_loss_weighting(config.autoencoder.decoder.recon_levels).to(accelerator.device) # (L,)
 
     while not training_done:
         for x, y in dataloader:
             autoencoder.train()
             with accelerator.accumulate([autoencoder]):
                 with torch.no_grad():
-                    features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels, config.residual)
                     if config.autoencoder.matryoshka:
+                        features_Bld = vae.get_feature(x)
                         targets = features_Bld
                     else:
+                        features_Bld, targets_BLd = vae.get_multi_level_features(x, config.autoencoder.decoder.recon_levels, config.residual)
                         targets = targets_BLd
                 recons = autoencoder(features_Bld)
                 loss = F.mse_loss(recons, targets, reduction='none')
@@ -94,6 +95,7 @@ def main():
                 if config.autoencoder.matryoshka:
                     weighted_loss = loss_per_element
                 elif not config.residual:
+                    lw = get_loss_weighting(config.autoencoder.decoder.recon_levels).to(accelerator.device) # (L,)
                     weighted_loss = loss_per_element * lw
                 else:
                     weighted_loss = loss_per_element
@@ -112,9 +114,7 @@ def main():
             if accelerator.sync_gradients:
                 global_step += 1
                 progress_bar.update(1)
-                loss = accelerator.gather(loss.detach())
-                loss = loss.mean().item()
-                logs = {'loss': loss}
+                logs = dict()
                 if not config.autoencoder.matryoshka:
                     loss_per_level = get_loss_per_level(loss, config.autoencoder.decoder.recon_levels)
                     for i, loss_pl in enumerate(loss_per_level):
@@ -122,6 +122,9 @@ def main():
                     if config.residual:
                         complete_loss = accelerator.gather(complete_loss.detach()).mean().item()
                         logs['complete_loss'] = complete_loss
+                loss = accelerator.gather(loss.detach())
+                loss = loss.mean().item()
+                logs['loss'] = loss
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
@@ -149,4 +152,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='configs/mar_vae.yaml')
+    args = parser.parse_args()
+    main(args.config)

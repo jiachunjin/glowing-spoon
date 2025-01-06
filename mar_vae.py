@@ -485,6 +485,12 @@ class AutoencoderKL(nn.Module):
         dec = self.decoder(z)
         return dec
     
+    def get_feature(self, x):
+        posterior = self.encode(x)
+        h = posterior.mode()
+
+        return rearrange(h, 'b c h w -> b (h w) c')
+    
     def get_multi_level_features(self, x, levels, residual):
         posterior = self.encode(x)
         h = posterior.mode()

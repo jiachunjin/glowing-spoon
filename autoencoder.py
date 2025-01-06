@@ -27,10 +27,14 @@ class Autoencoder_1D(nn.Module):
         recons = self.decoder(latents, num_activated_latent=num_activated_latent)
         return recons
     
-    def get_probs_and_bits(self, x_BLD: torch.Tensor) -> torch.Tensor:
+    @torch.no_grad()
+    def get_probs_and_bits(self, x_BLD: torch.Tensor, latent_mask=None) -> torch.Tensor:
         latents = self.encoder(x_BLD)
         probs = F.sigmoid(latents)
         bits = torch.bernoulli(probs)
+        bits = bits * 2 - 1 # from {0, 1} to {-1, 1}
+        if latent_mask is not None:
+            bits = bits * latent_mask
 
         return probs, bits
     
@@ -146,8 +150,8 @@ class Decoder_1D(nn.Module):
                     neighbours.append(self.recon_length+i)
                 cur_left += l * l
                 attn_pair.append(neighbours)
-                if l == self.recon_levels[-1]:
-                    neighbours += list(range(self.recon_length+i, self.recon_length + self.num_latents))
+                # if l == self.recon_levels[-1]:
+                #     neighbours += list(range(self.recon_length+i, self.recon_length + self.num_latents))
             attn_mask = create_decoder_attn_mask(attn_pair, attn_size, self.recon_length, residual=False).reshape(1, 1, attn_size, attn_size)
         else:
             assert self.num_latents == self.recon_length, 'if residual, then num_latents should be equal to recon_length'
@@ -176,7 +180,7 @@ class Decoder_1D(nn.Module):
         self.norm_post = nn.LayerNorm(self.embed_dim)
         self.output = nn.Linear(self.embed_dim, self.vae_dim)
 
-    def forward(self, latents_BKd: torch.Tensor, decode_bits=False) -> torch.Tensor:
+    def forward(self, latents_BKd: torch.Tensor, decode_bits=False, num_activated_latent=None) -> torch.Tensor:
         """
         latents_BKd: (B, K, d), output of the encoder, should be logits for Bernoulli
         return: (B, recon_length, vae_dim), reconstructed VAE feature map
@@ -242,6 +246,8 @@ class Decoder_1D_Matryoshka(nn.Module):
         self.num_layers = config.num_layers
         self.num_heads = config.num_heads
         self.num_latents = config.num_latents
+        if 'latents_mask_schedule' in config:
+            self.latents_mask_schedule = config.latents_mask_schedule
         self.recon_length = 256
         scale = self.embed_dim ** -0.5
 
@@ -257,6 +263,17 @@ class Decoder_1D_Matryoshka(nn.Module):
         self.mask_tokens = nn.Parameter(scale * torch.randn(1, self.embed_dim))
         # register buffer for the attn mask
         # currently only test use 256 latents to reconstruct 16x16, thus no mask used
+
+        # 2.5. mask the latents
+        if hasattr(self, 'latents_mask_schedule') and self.latents_mask_schedule == 'linear':
+            mask = torch.zeros(self.num_latents, self.input_dim)
+            assert self.num_latents == 512, 'only support 512 latents for now'
+            assert self.input_dim == 16, 'only support 16 dim latents for now'
+            for i in range(16):
+                start = i * 32
+                end = (i + 1) * 32
+                mask[start:end, :i + 1] = 1
+            self.register_buffer('latents_mask', mask)
 
         # 3. transformer
         self.norm_pre = nn.LayerNorm(self.embed_dim)
@@ -282,12 +299,18 @@ class Decoder_1D_Matryoshka(nn.Module):
                 p = F.sigmoid(latents_BKd)
                 p_ = torch.bernoulli(p).to(p.dtype) # (B, K, d)
                 latents_bin = p + (p_ - p).detach()
+                latents_bin = latents_bin * 2 - 1 # from {0, 1} to {-1, 1}
+                if hasattr(self, 'latents_mask_schedule'):
+                    latents_bin = self.latents_mask * latents_bin
                 x_BKD = self.input(latents_bin)
             else:
                 # use continuous latent for experimental purpose
                 x_BKD = self.input(latents_BKd)
         else:
             assert self.training == False, 'cannot decode bits in training mode'
+            if hasattr(self, 'latents_mask_schedule'):
+                latents_BKd = self.latents_mask * latents_BKd
+            # assert not hasattr(self, 'latents_mask_schedule'), 'cannot decode bits with latents_mask_schedule'
             x_BKD = self.input(latents_BKd)
 
         x_BKD = x_BKD + self.latents_pos_embed.to(dtype)
@@ -308,11 +331,14 @@ class Decoder_1D_Matryoshka(nn.Module):
             print("Inference mode", num_activated_latent)
         L = num_mask_token + K
         attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
-        attn_mask[:, :, num_mask_token:, num_mask_token:] = 0
         attn_mask[:, :, :num_mask_token, :num_mask_token] = 0
+        # attn_mask[:, :, num_mask_token:, num_mask_token:] = 0
         for i in range(B):
             Ni = num_activated_latent[i].item()
             attn_mask[i, :, :num_mask_token, num_mask_token:num_mask_token+Ni] = 0
+            for j in range(1, Ni+1):
+                attn_mask[i, :, num_mask_token-1+j, num_mask_token:num_mask_token+j] = 0
+            attn_mask[i, :, num_mask_token+Ni:, num_mask_token:num_mask_token+Ni] = 0
 
         x = torch.cat([mask_tokens, x_BKD], dim=1) # (B, recon_length+K, D)
         x = self.norm_pre(x)

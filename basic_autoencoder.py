@@ -8,20 +8,19 @@ from itertools import combinations
 
 def create_decoder_attn_mask(attn_pair, N, L, residual=False):
     mask = torch.full((N, N), float('-inf'))  # 初始化为 -inf
-    # 遍历 attn_pair 列表
     for pair in attn_pair:
-        # 生成 tuple 中的所有两两组合
         for i, j in combinations(pair, 2):
-            # 注意力互相可见
             mask[i, j] = 0
-            if i < L and j < L or (i >= L and j >= L):
+            if i < L and j < L:
                 mask[j, i] = 0
-        # 自注意力
+        mask[L:, L:] = float('-inf')
         for i in pair:
-            mask[i, i] = 0  # 自身注意力
-        
+            mask[i, i] = 0
+    for i in range(N-L):
+        mask[L+i, L:L+i] = 0
         if residual:
-            mask[L:, L:] = 0
+            raise NotImplementedError
+            # mask[L:, L:] = 0
     return mask
 
 

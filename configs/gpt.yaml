@@ -1,9 +1,43 @@
-residual: &residual true
+residual: &residual false
 autoencoder:
-  pretrained_ckpt_path: 'experiment/680x16_residual_bin/AE-distill_MAR_VAE-60k'
+  # pretrained_ckpt_path: 'experiment/distill_ori_new_casual_mask/AE-distill_MAR_VAE-2k'
+  # binary_dim: &binary_dim 16
+  # vae_dim: &vae_dim 16
+  # num_latents: &num_latents 256
+  # matryoshka: false
+  # encoder:
+  #   vae_dim: *vae_dim
+  #   embed_dim: 512
+  #   num_layers: 8
+  #   num_latents: *num_latents
+  #   num_heads: 8
+  #   output_dim: *binary_dim
+
+  # decoder:
+  #   residual: *residual
+  #   binary_mode: true
+  #   vae_dim: *vae_dim
+  #   embed_dim: 512
+  #   num_layers: 8
+  #   num_latents: *num_latents
+  #   num_heads: 8
+  #   input_dim: *binary_dim
+  #   recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
+  
+  # decoder_matryoshka:
+  #   binary_mode: true
+  #   vae_dim: *vae_dim
+  #   embed_dim: 512
+  #   num_layers: 8
+  #   num_latents: *num_latents
+  #   num_heads: 8
+  #   input_dim: *binary_dim
+
+  pretrained_ckpt_path: 'experiment/matryoshka_casual_latents_incre/AE-distill_MAR_VAE-5k'
   binary_dim: &binary_dim 16
   vae_dim: &vae_dim 16
-  num_latents: &num_latents 680
+  num_latents: &num_latents 512
+  matryoshka: true
   encoder:
     vae_dim: *vae_dim
     embed_dim: 512
@@ -11,9 +45,8 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     output_dim: *binary_dim
-
-  decoder:
-    residual: *residual
+  
+  decoder_matryoshka:
     binary_mode: true
     vae_dim: *vae_dim
     embed_dim: 512
@@ -21,12 +54,12 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
+    latents_mask_schedule: 'linear'
 
 gpt:
-  dim: 768
-  n_layer: 12
-  n_head: 12
+  dim: 1024
+  n_layer: 16
+  n_head: 16
   n_kv_head:
   multiple_of: 256
   ffn_dim_multiplier:
@@ -55,20 +88,22 @@ gpt:
   recon_levels: [1, 2, 3, 4, 5, 6, 8, 10, 13, 16] # the same as VAR
 
 train:
+  num_pred_bits:
   resume_path:
   skipped_keys:
-  global_step: 0
+  global_step: 
   exp_name: &exp_name 'gpt_newtok'
   wandb_proj: *exp_name
-  output_dir: *exp_name
+  # output_dir: *exp_name
+  output_dir: 'gpt_causal_latents_incre/full_imagenet'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 1
-  report_to: 'no'
-  num_iters: 50000
+  gradient_accumulation_steps: 2
+  report_to: 'wandb'
+  num_iters: 20000
   save_every: 5000
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  batch_size: 40 # to modify
+  batch_size: 25 # to modify
 
