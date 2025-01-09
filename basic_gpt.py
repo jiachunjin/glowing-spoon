@@ -111,8 +111,8 @@ class Attention(nn.Module):
 
     def forward(
         self, x: torch.Tensor, 
+        mask: Optional[torch.Tensor] = None,
         input_pos: Optional[torch.Tensor] = None, 
-        mask: Optional[torch.Tensor] = None
     ):
         bsz, seqlen, _ = x.shape
         kv_size = self.n_kv_head * self.head_dim
@@ -157,7 +157,7 @@ class TransformerBlock(nn.Module):
         self.drop_path = nn.Identity()
 
     def forward(
-        self, x: torch.Tensor, mask: Optional[torch.Tensor] = None):
-        h = x + self.drop_path(self.attention(x=self.attention_norm(x), mask=mask))
+        self, x: torch.Tensor, mask=None, input_pos=None):
+        h = x + self.drop_path(self.attention(x=self.attention_norm(x), mask=mask, input_pos=input_pos))
         out = h + self.drop_path(self.feed_forward(self.ffn_norm(h)))
         return out

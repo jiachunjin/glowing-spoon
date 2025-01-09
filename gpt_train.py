@@ -7,7 +7,7 @@ from accelerate import Accelerator
 from accelerate.utils import ProjectConfiguration
 from einops import rearrange
 
-from utils import get_dataloader, flatten_dict, bernoulli_entropy
+from utils import get_dataloader, flatten_dict, bernoulli_entropy, get_latents_mask
 
 
 def get_models(config):
@@ -75,7 +75,10 @@ def main():
     autoencoder = autoencoder.to(accelerator.device)
 
     if accelerator.is_main_process:
-        accelerator.init_trackers(config.train.wandb_proj, config=flatten_dict(config))
+        if config.train.report_to == 'wandb':
+            accelerator.init_trackers(config.train.wandb_proj, config=flatten_dict(config))
+        else:
+            accelerator.init_trackers(config.train.wandb_proj)
 
     training_done = False
     progress_bar = tqdm(
@@ -92,14 +95,12 @@ def main():
         print(f'Number of predicted tokens: {num_pred_bits}')
 
     if config.autoencoder.matryoshka:
-        latent_mask = torch.zeros(config.autoencoder.decoder_matryoshka.num_latents, config.autoencoder.decoder_matryoshka.input_dim).to(accelerator.device)
-        assert config.autoencoder.decoder_matryoshka.num_latents == 512, 'only support 512 latents for now'
-        assert config.autoencoder.decoder_matryoshka.input_dim == 16, 'only support 16 dim latents for now'
-        for i in range(16):
-            start = i * 32
-            end = (i + 1) * 32
-            latent_mask[start:end, :i + 1] = 1
-        latent_mask = latent_mask.unsqueeze(0)
+        latent_mask = get_latents_mask(
+            num_latents = config.autoencoder.num_latents,
+            input_dim   = config.autoencoder.binary_dim,
+            schedule    = config.autoencoder.decoder_matryoshka.latents_mask_schedule,
+        )
+        latent_mask = latent_mask.unsqueeze(0).to(accelerator.device)
 
     while not training_done:
         for x, y in dataloader:

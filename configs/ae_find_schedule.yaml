@@ -1,0 +1,47 @@
+autoencoder:
+  binary_dim: &binary_dim 24
+  vae_dim: &vae_dim 16
+  num_latents: &num_latents 512
+  matryoshka: true
+  encoder:
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    output_dim: *binary_dim
+  
+  decoder_matryoshka:
+    binary_mode: true
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    input_dim: *binary_dim
+    # latents_mask_schedule: 'exp_32'
+    # latents_mask_schedule: 'exp_48'
+    # latents_mask_schedule: 'flat_exp_32'
+    latents_mask_schedule: 'linear_24'
+    # latents_mask_schedule: 'linear_16'
+
+train:
+  resume_path: 'experiment/AE_256_exp_32/AE-distill_MAR_VAE-5k'
+  # skipped_keys:
+  skipped_keys: ['encoder.latents', 'decoder.latents_pos_embed', 'encoder.output.weight', 'encoder.output.bias', 'decoder.input.weight', 'decoder.input.bias', 'decoder.latents_mask']
+  global_step:
+  exp_name: &exp_name 'distill_MAR_VAE'
+  wandb_proj: *exp_name
+  # output_dir: *exp_name
+  output_dir: 'AE_512_linear_24'
+  logging_dir: 'logs'
+  mixed_precision: 'bf16'
+  gradient_accumulation_steps: 1
+  report_to: 'wandb'
+  num_iters: 30000
+  # val_every: 10
+  save_every: 2000
+
+data:
+  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
+  batch_size: 60 # to modify

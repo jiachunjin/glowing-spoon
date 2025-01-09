@@ -1,3 +1,5 @@
+import math
+import numpy as np
 import torch
 import webdataset as wds
 import torch.nn.functional as F
@@ -84,3 +86,67 @@ def get_residual_summation(recons, levels):
 
 def bernoulli_entropy(p):
     return -p * torch.log(torch.clip(p, 1e-10, 1)) - (1 - p) * torch.log(torch.clip(1 - p, 1e-10, 1))
+
+def get_latents_mask(num_latents, input_dim, schedule):
+    mask = torch.zeros(num_latents, input_dim)
+    if schedule == 'linear_16':
+        # 1, 2, 3, 4, ..., 15, 16 (16x32 = 512)
+        for i in range(16):
+            start = i * 32
+            end = (i + 1) * 32
+            mask[start:end, :i + 1] = 1
+    elif schedule == 'linear_24':
+        # [ 1  2  3  4  4  5  6  7  7  8  9 10 10 11 12 13 13 14 15 16 16 17 18 19 19 20 21 22 22 23 24 24]
+        # 6640
+        num_blocks = 32
+        block_size = 16
+        max_bits = 24
+        min_bits = 2
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(1, 24, num_blocks)).astype(int)
+        print(num_activated_bits)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == 'exp_32':
+        # [2 3 4 6 8 12 18 26 32 32 32 32 32 32 32 32] tensor(10720.) 512x16 = 8192, 16x16x64 = 16384
+        l = 16
+        num_l = 32
+        assert num_latents == l * num_l
+        assert input_dim == 32
+        num_activated_bits = np.minimum(np.array([math.ceil(1.5**(i)) for i in range(1, l+1)]), 32)
+        for i in range(l):
+            start = i * num_l
+            end = (i + 1) * num_l
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == 'exp_48':
+        # [ 2  2  3  4  5  6  7 10 13 17 22 28 37 48 48 48] tensor(9600.)
+        num_blocks = 16
+        block_size = 32
+        max_bits = 48
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.minimum(np.array([math.ceil(1.32**(i)) for i in range(1, num_blocks+1)]), max_bits)
+        print(num_activated_bits)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == 'flat_exp_32':
+        # [ 4  4  4  4  5  6  7  8  9 11 13 16 19 23 27 32] tensor(6144.)
+        num_blocks = 16
+        block_size = 32
+        max_bits = 32
+        min_bits = 4
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.minimum(np.array([math.ceil(1.2**(i)) for i in range(4, num_blocks+4)]), max_bits)
+        num_activated_bits = np.maximum(num_activated_bits, min_bits)
+        print(num_activated_bits)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    else:
+        raise ValueError(f'Unknown schedule: {schedule}')
+    
+    return mask

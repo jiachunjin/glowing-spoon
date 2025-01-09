@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from basic_autoencoder import SelfAttnBlock, create_decoder_attn_mask
+from utils import get_latents_mask
 
 class Autoencoder_1D(nn.Module):
     def __init__(self, config):
@@ -258,31 +259,29 @@ class Decoder_1D_Matryoshka(nn.Module):
         self.pos_embed_full = nn.Parameter(scale * torch.randn(1, 256, self.embed_dim))
         self.latents_pos_embed = nn.Parameter(scale * torch.randn(self.num_latents, self.embed_dim))
 
-        # 2. mask tokens
+        # 3. mask tokens
         # one token for 16x16
         self.mask_tokens = nn.Parameter(scale * torch.randn(1, self.embed_dim))
-        # register buffer for the attn mask
-        # currently only test use 256 latents to reconstruct 16x16, thus no mask used
-
-        # 2.5. mask the latents
-        if hasattr(self, 'latents_mask_schedule') and self.latents_mask_schedule == 'linear':
-            mask = torch.zeros(self.num_latents, self.input_dim)
-            assert self.num_latents == 512, 'only support 512 latents for now'
-            assert self.input_dim == 16, 'only support 16 dim latents for now'
-            for i in range(16):
-                start = i * 32
-                end = (i + 1) * 32
-                mask[start:end, :i + 1] = 1
+        # mask the latents
+        if hasattr(self, 'latents_mask_schedule'):
+            mask = get_latents_mask(self.num_latents, self.input_dim, self.latents_mask_schedule)
+            # mask = torch.zeros(self.num_latents, self.input_dim)
+            # assert self.num_latents == 512, 'only support 512 latents for now'
+            # assert self.input_dim == 16, 'only support 16 dim latents for now'
+            # for i in range(16):
+            #     start = i * 32
+            #     end = (i + 1) * 32
+            #     mask[start:end, :i + 1] = 1
             self.register_buffer('latents_mask', mask)
 
-        # 3. transformer
+        # 4. transformer
         self.norm_pre = nn.LayerNorm(self.embed_dim)
         self.transformer = nn.ModuleList([
             SelfAttnBlock(self.embed_dim, self.num_heads, mlp_ratio=4.0)
             for _ in range(self.num_layers)
         ])
 
-        # 4. output latents
+        # 5. output latents
         self.norm_post = nn.LayerNorm(self.embed_dim)
         self.output = nn.Linear(self.embed_dim, self.vae_dim)
 
@@ -310,7 +309,6 @@ class Decoder_1D_Matryoshka(nn.Module):
             assert self.training == False, 'cannot decode bits in training mode'
             if hasattr(self, 'latents_mask_schedule'):
                 latents_BKd = self.latents_mask * latents_BKd
-            # assert not hasattr(self, 'latents_mask_schedule'), 'cannot decode bits with latents_mask_schedule'
             x_BKD = self.input(latents_BKd)
 
         x_BKD = x_BKD + self.latents_pos_embed.to(dtype)
@@ -332,7 +330,6 @@ class Decoder_1D_Matryoshka(nn.Module):
         L = num_mask_token + K
         attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
         attn_mask[:, :, :num_mask_token, :num_mask_token] = 0
-        # attn_mask[:, :, num_mask_token:, num_mask_token:] = 0
         for i in range(B):
             Ni = num_activated_latent[i].item()
             attn_mask[i, :, :num_mask_token, num_mask_token:num_mask_token+Ni] = 0
@@ -343,7 +340,7 @@ class Decoder_1D_Matryoshka(nn.Module):
         x = torch.cat([mask_tokens, x_BKD], dim=1) # (B, recon_length+K, D)
         x = self.norm_pre(x)
         for _, block in enumerate(self.transformer):
-            x = block(x, attn_bias=attn_mask) # no mask for now
+            x = block(x, attn_bias=attn_mask)
         
         recons = x[:, :self.recon_length]
         recons = self.norm_post(recons)
