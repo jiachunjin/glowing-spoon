@@ -14,19 +14,30 @@ def get_models(config):
     from gpt import Transformer_bin
     from autoencoder import Autoencoder_1D
     from mar_vae import AutoencoderKL
+    from ae_total import AE_total
 
-    autoencoder = Autoencoder_1D(config.autoencoder)
-    ckpt = torch.load(config.autoencoder.pretrained_ckpt_path, map_location='cpu')
-    autoencoder.load_state_dict(ckpt)
-    autoencoder.requires_grad_(False)
-    autoencoder.eval()
-    vae = AutoencoderKL(embed_dim=16, ch_mult=(1, 1, 2, 2, 4), ckpt_path='pretrained_models/vae/kl16.ckpt')
-    vae.requires_grad_(False)
-    vae.eval()
+    if config.total:
+        autoencoder = AE_total(config=config.autoencoder)
+        ckpt = torch.load(config.autoencoder.pretrained_ckpt_path, map_location='cpu', weights_only=True)
+        autoencoder.load_state_dict(ckpt)
+        autoencoder.requires_grad_(False)
+        autoencoder.eval()
+        gpt = Transformer_bin(config.gpt)
 
-    gpt = Transformer_bin(config.gpt)
+        return autoencoder, gpt
+    else:
+        autoencoder = Autoencoder_1D(config.autoencoder)
+        ckpt = torch.load(config.autoencoder.pretrained_ckpt_path, map_location='cpu')
+        autoencoder.load_state_dict(ckpt)
+        autoencoder.requires_grad_(False)
+        autoencoder.eval()
+        vae = AutoencoderKL(embed_dim=16, ch_mult=(1, 1, 2, 2, 4), ckpt_path='pretrained_models/vae/kl16.ckpt')
+        vae.requires_grad_(False)
+        vae.eval()
 
-    return autoencoder, vae, gpt
+        gpt = Transformer_bin(config.gpt)
+
+        return autoencoder, vae, gpt
 
 def get_accelerator(config):
     output_dir = os.path.join('experiment', config.output_dir)
@@ -43,14 +54,17 @@ def get_accelerator(config):
     return accelerator, output_dir
 
 def main():
-    config = OmegaConf.load('configs/gpt.yaml')
+    config = OmegaConf.load('configs/gpt_total.yaml')
     accelerator, output_dir = get_accelerator(config.train)
-    autoencoder, vae, gpt = get_models(config)
+    if config.total:
+        autoencoder, gpt = get_models(config)
+    else:
+        autoencoder, vae, gpt = get_models(config)
     dataloader = get_dataloader(config.data)
     global_step = config.train.global_step if config.train.global_step is not None else 0
 
     if config.train.resume_path is not None:
-        ckpt = torch.load(config.train.resume_path, map_location='cpu')
+        ckpt = torch.load(config.train.resume_path, map_location='cpu', weights_only=True)
         if config.train.skipped_keys:
             ckpt = {k: v for k, v in ckpt.items() if k not in config.train.skipped_keys}
         m, u = gpt.load_state_dict(ckpt, strict=False)
@@ -71,7 +85,8 @@ def main():
         print('Number of learnable parameters: ', sum(p.numel() for p in params_to_learn if p.requires_grad))
 
     gpt, dataloader, optimizer = accelerator.prepare(gpt, dataloader, optimizer)
-    vae = vae.to(accelerator.device)
+    if not config.total:
+        vae = vae.to(accelerator.device)
     autoencoder = autoencoder.to(accelerator.device)
 
     if accelerator.is_main_process:
@@ -98,7 +113,7 @@ def main():
         latent_mask = get_latents_mask(
             num_latents = config.autoencoder.num_latents,
             input_dim   = config.autoencoder.binary_dim,
-            schedule    = config.autoencoder.decoder_matryoshka.latents_mask_schedule,
+            schedule    = config.autoencoder.decoder_1d.latents_mask_schedule,
         )
         latent_mask = latent_mask.unsqueeze(0).to(accelerator.device)
 
@@ -107,8 +122,11 @@ def main():
             gpt.train()
             with accelerator.accumulate([gpt]):
                 with torch.no_grad():
-                    features_Bld = vae.get_feature(x)
-                    probs, bits = autoencoder.get_probs_and_bits(features_Bld, latent_mask=latent_mask)
+                    if config.total:
+                        probs, bits = autoencoder.get_probs_and_bits(x, latent_mask=latent_mask)
+                    else:
+                        features_Bld = vae.get_feature(x)
+                        probs, bits = autoencoder.get_probs_and_bits(features_Bld, latent_mask=latent_mask)
                     probs = probs[:, :config.train.num_pred_bits, :]
                     bits = bits[:, :config.train.num_pred_bits, :]
                     entropy = bernoulli_entropy(probs)
@@ -116,7 +134,7 @@ def main():
                 cond_idx = y.long()
 
                 _, loss = gpt(binary_vec=bits, cond_idx=cond_idx, targets=probs)
-                if 'latents_mask_schedule' in config.autoencoder.decoder_matryoshka:
+                if 'latents_mask_schedule' in config.autoencoder.decoder_1d:
                     loss *= latent_mask
                     entropy *= latent_mask
                 kl_divergence = (loss - entropy)

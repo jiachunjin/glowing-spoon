@@ -154,10 +154,10 @@ class TransformerBlock(nn.Module):
         self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
         # self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-        self.drop_path = nn.Identity()
+        # self.drop_path = nn.Identity()
 
     def forward(
         self, x: torch.Tensor, mask=None, input_pos=None):
-        h = x + self.drop_path(self.attention(x=self.attention_norm(x), mask=mask, input_pos=input_pos))
-        out = h + self.drop_path(self.feed_forward(self.ffn_norm(h)))
+        h = x + self.attention(x=self.attention_norm(x), mask=mask, input_pos=input_pos)
+        out = h + self.feed_forward(self.ffn_norm(h))
         return out

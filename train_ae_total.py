@@ -1,0 +1,173 @@
+import os
+import argparse
+import torch
+import torch.nn.functional as F
+from tqdm.auto import tqdm
+from omegaconf import OmegaConf
+from accelerate import Accelerator
+from accelerate.utils import ProjectConfiguration
+
+from ae_total import AE_total
+from hybrid_loss import Hybrid_Loss
+from utils import get_dataloader, flatten_dict
+
+
+def get_models(config):
+    autoencoder = AE_total(config=config.autoencoder)
+    hybrid_loss = Hybrid_Loss(disc_start=config.hybrid_loss.disc_start, disc_weight=config.hybrid_loss.disc_weight)
+
+    return autoencoder, hybrid_loss
+
+def get_accelerator(config):
+    output_dir = os.path.join('experiment', config.output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    logging_dir = os.path.join(output_dir, config.logging_dir)
+    project_config = ProjectConfiguration(project_dir=config.output_dir, logging_dir=logging_dir)
+    accelerator = Accelerator(
+        log_with=None if config.report_to == 'no' else config.report_to,
+        mixed_precision=config.mixed_precision,
+        project_config=project_config,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+    )
+
+    return accelerator, output_dir
+
+def main(config_path):
+    config = OmegaConf.load(config_path)
+    accelerator, output_dir = get_accelerator(config.train)
+    autoencoder, hybrid_loss = get_models(config)
+    dataloader = get_dataloader(config.data)
+    global_step = config.train.global_step if config.train.global_step is not None else 0
+
+    params_to_learn = list(autoencoder.parameters())
+    disc_params = list(hybrid_loss.discriminator.parameters())
+
+    optimizer = torch.optim.AdamW(
+        params_to_learn,
+        lr           = 1e-4,
+        betas        = (0.9, 0.95),
+        weight_decay = 5e-2,
+        eps          = 1e-8,
+    )
+    optimizer_disc = torch.optim.AdamW(
+        disc_params,
+        lr           = 1e-5 / config.hybrid_loss.disc_weight,
+        betas        = (0.9, 0.95),
+        weight_decay = 5e-2,
+        eps          = 1e-8,
+    )
+
+    if accelerator.is_main_process:
+        print('Number of learnable parameters: ', sum(p.numel() for p in params_to_learn if p.requires_grad))
+    
+    autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc = accelerator.prepare(autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc)
+
+    if accelerator.is_main_process:
+        if config.train.report_to == 'wandb':
+            accelerator.init_trackers(config.train.wandb_proj, config=flatten_dict(config))
+        else:
+            accelerator.init_trackers(config.train.wandb_proj)
+
+    training_done = False
+    progress_bar = tqdm(
+        total=config.train.num_iters,
+        initial=global_step,
+        desc="Steps",
+        disable=not accelerator.is_local_main_process,
+    )
+
+    while not training_done:
+        for x, y in dataloader:
+            autoencoder.train()
+            hybrid_loss.train()
+            with accelerator.accumulate([autoencoder, hybrid_loss]):
+                recon_full, recon_matryoshka = autoencoder(x)
+                # --------------------- optimize autoencoder ---------------------
+                loss_gen = hybrid_loss(
+                    inputs          = x,
+                    reconstructions = recon_full,
+                    optimizer_idx   = 0,
+                    global_step     = global_step+1,
+                    last_layer      = autoencoder.module.decoder.last_layer
+                )
+
+                loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
+
+                optimizer.zero_grad()
+                if accelerator.sync_gradients:
+                    accelerator.clip_grad_norm_(params_to_learn, 1.0)
+                accelerator.backward(loss_gen + loss_matryoshka)
+                optimizer.step()
+                # --------------------- optimize discriminator ---------------------
+                loss_disc = hybrid_loss(
+                    inputs          = x,
+                    reconstructions = recon_full,
+                    optimizer_idx   = 1,
+                    global_step     = global_step+1,
+                )
+                optimizer_disc.zero_grad()
+                if accelerator.sync_gradients:
+                    accelerator.clip_grad_norm_(disc_params, 1.0)
+                accelerator.backward(loss_disc)
+                optimizer_disc.step()
+
+            if accelerator.sync_gradients:
+                global_step += 1
+                progress_bar.update(1)
+                loss_gen = accelerator.gather(loss_gen.detach()).mean().item()
+                loss_disc = accelerator.gather(loss_disc.detach()).mean().item()
+                loss_matryoshka = accelerator.gather(loss_matryoshka.detach()).mean().item()
+
+                logs = dict()
+                logs['loss_gen'] = loss_gen
+                logs['loss_disc'] = loss_disc
+                logs['loss_matryoshka'] = loss_matryoshka
+                accelerator.log(logs, step=global_step)
+                progress_bar.set_postfix(**logs)
+
+            if global_step > 0 and global_step % config.train.save_every == 0 and accelerator.is_main_process:
+                autoencoder.eval()
+                state_dict = accelerator.unwrap_model(autoencoder).state_dict()
+                torch.save(state_dict, os.path.join(output_dir, f"AE-{config.train.exp_name}-{global_step // 1000}k"))
+                state_dict = accelerator.unwrap_model(hybrid_loss).state_dict()
+                torch.save(state_dict, os.path.join(output_dir, f"Loss-{config.train.exp_name}-{global_step // 1000}k"))
+
+            # if global_step > 0 and global_step % config.train.val_every == 0 and accelerator.is_main_process:
+            #     # 会卡住，不知道为什么
+            #     autoencoder.eval()
+            #     recon_path = os.path.join('./assets/rec_total', config.train.exp_name)
+            #     os.makedirs(recon_path, exist_ok=True)
+            #     with torch.no_grad():
+            #         img_dec = reconstrut_image(autoencoder)
+            #     img_dec.save(os.path.join(recon_path, f'{global_step:05d}.png'))
+
+            if global_step >= config.train.num_iters:
+                training_done = True
+                break
+
+    accelerator.end_training()
+
+
+def reconstrut_image(autoencoder):
+    import numpy as np
+    from PIL import Image
+    from torchvision.utils import make_grid
+    from torchvision.transforms import ToTensor
+
+    with torch.no_grad():
+        image = Image.open('assets/bear.png')
+        image = ToTensor()(image).unsqueeze(0)
+        image = image * 2 - 1
+        recon_full = autoencoder(image)
+        recon = torch.clamp((recon_full + 1) / 2, 0, 1)
+        chw = make_grid(recon, nrow=10, padding=0, pad_value=1.0)
+        chw = chw.permute(1, 2, 0).mul_(255).cpu().numpy()
+        chw = Image.fromarray(chw.astype(np.uint8))
+    
+    return chw
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='configs/ae_total.yaml')
+    args = parser.parse_args()
+    main(args.config)

@@ -104,7 +104,6 @@ def get_latents_mask(num_latents, input_dim, schedule):
         min_bits = 2
         mask = torch.zeros(num_blocks*block_size, max_bits)
         num_activated_bits = np.ceil(np.linspace(1, 24, num_blocks)).astype(int)
-        print(num_activated_bits)
         for i in range(num_blocks):
             start = i * block_size
             end = (i + 1) * block_size

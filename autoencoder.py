@@ -39,8 +39,8 @@ class Autoencoder_1D(nn.Module):
 
         return probs, bits
     
-    def decode_bits(self, bits: torch.Tensor) -> torch.Tensor:
-        recons = self.decoder(bits, decode_bits=True)
+    def decode_bits(self, bits: torch.Tensor, num_activated_latent=None) -> torch.Tensor:
+        recons = self.decoder(bits, num_activated_latent=num_activated_latent, decode_bits=True)
         return recons
 
 
@@ -319,14 +319,18 @@ class Decoder_1D_Matryoshka(nn.Module):
         latent_len = K
         num_mask_token = self.recon_length
         if self.training:
-            assert num_activated_latent is None, 'num_activated_latent should be None in training mode'
-            num_activated_latent = torch.randint(1, latent_len+1, (B,))
+            if num_activated_latent is None:
+                num_activated_latent = torch.randint(1, latent_len+1, (B,), device=latents_BKd.device)
+            else:
+                num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
+            # assert num_activated_latent is None, 'num_activated_latent should be None in training mode'
+            # num_activated_latent = torch.randint(1, latent_len+1, (B,))
         else:
             if num_activated_latent is None:
                 num_activated_latent = torch.tensor(latent_len).repeat(B).to(latents_BKd.device)
             else:
                 num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
-            print("Inference mode", num_activated_latent)
+            print("Inference mode", num_activated_latent[0].item())
         L = num_mask_token + K
         attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
         attn_mask[:, :, :num_mask_token, :num_mask_token] = 0
