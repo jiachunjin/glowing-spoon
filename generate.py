@@ -4,6 +4,36 @@ from tqdm.auto import trange
 
 
 @torch.no_grad()
+def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, device):
+    if cfg_scale > 1.0:
+        cond_null = torch.ones_like(cond) * gpt.num_classes
+        cond_combined = torch.cat([cond, cond_null])
+    else:
+        cond_combined = cond
+
+    T = 1
+    T_new = T + max_new_tokens
+    max_seq_length = T_new
+    max_batch_size = cond.shape[0]
+
+    with torch.device(device):
+        max_batch_size_cfg = max_batch_size * 2 if cfg_scale > 1.0 else max_batch_size
+        gpt.setup_caches(max_batch_size=max_batch_size_cfg, max_seq_length=max_seq_length, dtype=gpt.pos_embedding.dtype)
+
+    seq = torch.empty((max_batch_size, T_new, gpt.config.input_dim), dtype=torch.float, device=device)
+
+    input_pos = torch.arange(0, T, device=device)
+    next_token = prefill(gpt, cond_combined, input_pos, cfg_scale)
+    seq[:, T:T+1] = next_token
+
+    input_pos = torch.tensor([T], device=device, dtype=torch.int)
+    generated_tokens, _ = decode_n_tokens(gpt, next_token, input_pos, max_new_tokens-1, cfg_scale)
+    seq[:, T+1:] = torch.cat(generated_tokens, dim=1)
+
+    return seq[:, T:]
+
+
+@torch.no_grad()
 def generate(gpt, cond, max_new_tokens, cfg_scale, device):
     if cfg_scale > 1.0:
         cond_null = torch.ones_like(cond) * gpt.num_classes

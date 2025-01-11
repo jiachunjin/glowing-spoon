@@ -39,6 +39,16 @@ def main(config_path):
     dataloader = get_dataloader(config.data)
     global_step = config.train.global_step if config.train.global_step is not None else 0
 
+    if config.train.resume_path is not None:
+        ckpt = torch.load(config.train.resume_path, map_location='cpu', weights_only=True)
+        if config.train.skipped_keys:
+            ckpt = {k: v for k, v in ckpt.items() if k not in config.train.skipped_keys}
+        m, u = autoencoder.load_state_dict(ckpt, strict=False)
+        print('missing: ', m)
+        print('unexpected: ', u)
+        if accelerator.is_main_process:
+            print(f'AE ckpt loaded from {config.train.resume_path}')
+
     params_to_learn = list(autoencoder.parameters())
     disc_params = list(hybrid_loss.discriminator.parameters())
 

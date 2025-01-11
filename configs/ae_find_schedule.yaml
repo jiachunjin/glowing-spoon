@@ -1,5 +1,5 @@
 autoencoder:
-  binary_dim: &binary_dim 24
+  binary_dim: &binary_dim 32
   vae_dim: &vae_dim 16
   num_latents: &num_latents 512
   matryoshka: true
@@ -22,7 +22,7 @@ autoencoder:
     # latents_mask_schedule: 'exp_32'
     # latents_mask_schedule: 'exp_48'
     # latents_mask_schedule: 'flat_exp_32'
-    latents_mask_schedule: 'linear_24'
+    latents_mask_schedule: 'step_linear_32'
     # latents_mask_schedule: 'linear_16'
 
 train:
@@ -33,12 +33,12 @@ train:
   exp_name: &exp_name 'distill_MAR_VAE'
   wandb_proj: *exp_name
   # output_dir: *exp_name
-  output_dir: 'AE_512_linear_24'
+  output_dir: 'AE_512_step_linear_32'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
   report_to: 'wandb'
-  num_iters: 30000
+  num_iters: 2000
   # val_every: 10
   save_every: 2000
 

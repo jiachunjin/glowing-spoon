@@ -2,9 +2,11 @@ total: true
 autoencoder:
   matryoshka: true
   pretrained_ckpt_path: 'experiment/ae_total/512_24/AE-ae_total-10k'
+  # pretrained_ckpt_path: 'experiment/ae_total/512_step_linear_32/AE-ae_total-5k'
   vae_dim: &vae_dim 16
   num_latents: &num_latents 512
   binary_dim: &binary_dim 24
+  # binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
 
@@ -25,18 +27,23 @@ autoencoder:
     num_heads: 8
     input_dim: *binary_dim
     latents_mask_schedule: 'linear_24'
+    # latents_mask_schedule: 'step_linear_32'
 
 gpt:
+  # block_size:
+  block_size: 16
+  num_classes: 1000
   dim: 1024
   n_layer: 16
   n_head: 16
+  seq_len: *num_latents
   norm_eps: 1e-5
   resid_dropout_p: 0.0
   token_dropout_p: 0.0
   attn_dropout_p: 0.0
   drop_path_rate: 0.0
   ffn_dropout_p: 0.0
-  num_classes: 1000
+  
   class_dropout_prob: 0.1
   cls_token_num: 1
   input_dim: *binary_dim
@@ -46,14 +53,14 @@ gpt:
 
 train:
   num_pred_bits:
-  resume_path: 'experiment/gpt_causal_latents_incre/linear_24/GPT-gpt_newtok-20k'
+  resume_path: 'experiment/gpt_causal_latents_incre/linear_24_total/GPT-gpt_newtok-50k'
   skipped_keys:
   # skipped_keys: ['tok_eb.weight', 'tok_eb.bias', 'output.weight', 'output.bias']
   global_step: 
   exp_name: &exp_name 'gpt_newtok'
   wandb_proj: *exp_name
   # output_dir: *exp_name
-  output_dir: 'gpt_causal_latents_incre/linear_24_total'
+  output_dir: 'gpt_causal_latents_incre/linear_24_total_block16'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1

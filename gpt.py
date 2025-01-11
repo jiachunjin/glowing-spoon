@@ -10,25 +10,31 @@ from basic_gpt import LabelEmbedder, TransformerBlock, RMSNorm, KVCache
 class Transformer_bin(nn.Module):
     def __init__(self, config):
         super().__init__()
+        # 0. hyperparameters
         self.config = config
+        self.dim = config.dim
         self.n_layer = config.n_layer
         self.num_classes = config.num_classes
         self.cls_token_num = config.cls_token_num
-        self.cls_embedding = LabelEmbedder(config.num_classes, config.dim, config.class_dropout_prob)
+        if config.block_size is None:
+            self.block_prediction = False
+            self.seq_len = config.seq_len + 1
+        else:
+            self.block_prediction = True
+            self.block_size = config.block_size
+            self.seq_len = config.seq_len + self.block_size
+        scale = self.dim ** -0.5
 
-        self.pos_embedding = nn.Parameter(torch.randn(680 + 1, config.dim))
+        self.cls_embedding = LabelEmbedder(self.num_classes, self.dim, config.class_dropout_prob)
+        self.pos_embedding = nn.Parameter(scale * torch.randn(681, self.dim)) # TODO
         self.tok_eb = nn.Linear(config.input_dim, config.dim)
-
         self.tok_dropout = nn.Dropout(config.token_dropout_p)
 
-        dpr = [x.item() for x in torch.linspace(0, config.drop_path_rate, config.n_layer)]
         self.layers = torch.nn.ModuleList()
-        for layer_id in range(config.n_layer):
-            self.layers.append(TransformerBlock(config, dpr[layer_id]))
-
-        # output layer
+        for _ in range(config.n_layer):
+            self.layers.append(TransformerBlock(config))
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
-        self.output = nn.Linear(config.dim, config.input_dim, bias=False)
+        self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
 
     def forward(
         self, 
@@ -40,12 +46,25 @@ class Transformer_bin(nn.Module):
     ):
         if binary_vec is not None and cond_idx is not None: # training or naive inference
             cond_embeddings = self.cls_embedding(cond_idx, train=self.training)[:,:self.cls_token_num]
+            if self.block_prediction:
+                # repeat self.block_size times to match the size of the first block
+                cond_embeddings = cond_embeddings.repeat_interleave(self.block_size, dim=1)
+                # build a block mask with block_size the same as the self.block_size
+                patch_nums = [4] * (self.seq_len // self.block_size)
+                L = sum(pn ** 2 for pn in patch_nums)
+                d = torch.cat([torch.full((pn*pn,), i) for i, pn in enumerate(patch_nums)]).view(1, L, 1)
+                dT = d.transpose(1, 2)
+                mask = torch.where(d >= dT, 0., -torch.inf).reshape(1, 1, L, L).to(cond_embeddings.device)
+            else:
+                mask = None # this leads to the casual mask
+
             token_embeddings = self.tok_eb(binary_vec)
             token_embeddings = torch.cat((cond_embeddings, token_embeddings), dim=1)
-            mask = None
             h = self.tok_dropout(token_embeddings)
             h += self.pos_embedding[:h.shape[1]]
         else:
+            if self.block_prediction: raise NotImplementedError
+            assert self.training==False
             if cond_idx is not None:
                 # prefill in inference
                 token_embeddings = self.cls_embedding(cond_idx, train=self.training)[:,:self.cls_token_num]
@@ -62,7 +81,10 @@ class Transformer_bin(nn.Module):
 
         h = self.norm(h)
         if input_pos is None:
-            logits = self.output(h[:, :-1, :]).float()
+            if self.block_prediction:
+                logits = self.output(h[:, :-self.block_size, :]).float()
+            else:
+                logits = self.output(h[:, :-1, :]).float()
         else:
             assert self.training==False
             logits = self.output(h).float()
