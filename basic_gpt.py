@@ -79,13 +79,23 @@ class KVCache(nn.Module):
         self.register_buffer('k_cache', torch.zeros(cache_shape, dtype=dtype))
         self.register_buffer('v_cache', torch.zeros(cache_shape, dtype=dtype))
 
+    def register_block_size(self, block_size):
+        self.block_size = block_size
+
     def update(self, input_pos, k_val, v_val):
         # input_pos: [S], k_val: [B, H, S, D]
-        assert input_pos.shape[0] == k_val.shape[2]
-        k_out = self.k_cache
-        v_out = self.v_cache
-        k_out[:, :, input_pos] = k_val
-        v_out[:, :, input_pos] = v_val
+        if input_pos.shape[0] == k_val.shape[2]:
+            # predict_block = False
+            k_out = self.k_cache
+            v_out = self.v_cache
+            k_out[:, :, input_pos] = k_val
+            v_out[:, :, input_pos] = v_val
+        else:
+            # predict_block = True
+            k_out = self.k_cache
+            v_out = self.v_cache
+            k_out[:, :, input_pos*self.block_size:(input_pos+1)*self.block_size] = k_val
+            v_out[:, :, input_pos*self.block_size:(input_pos+1)*self.block_size] = v_val
 
         return k_out, v_out
 

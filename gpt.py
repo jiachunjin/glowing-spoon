@@ -35,6 +35,15 @@ class Transformer_bin(nn.Module):
             self.layers.append(TransformerBlock(config))
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
+        if self.block_prediction:
+            mask_size = self.seq_len
+            block_size = self.block_size
+            mask = torch.full((mask_size, mask_size), -torch.inf)
+            for i in range(0, mask_size, block_size):
+                for j in range(0, i + block_size, block_size):
+                    if i >= j:
+                        mask[i:i+block_size, j:j+block_size] = 0
+            self.register_buffer('mask', mask.reshape(1, 1, mask_size, mask_size))
 
     def forward(
         self, 
@@ -50,11 +59,12 @@ class Transformer_bin(nn.Module):
                 # repeat self.block_size times to match the size of the first block
                 cond_embeddings = cond_embeddings.repeat_interleave(self.block_size, dim=1)
                 # build a block mask with block_size the same as the self.block_size
-                patch_nums = [4] * (self.seq_len // self.block_size)
-                L = sum(pn ** 2 for pn in patch_nums)
-                d = torch.cat([torch.full((pn*pn,), i) for i, pn in enumerate(patch_nums)]).view(1, L, 1)
-                dT = d.transpose(1, 2)
-                mask = torch.where(d >= dT, 0., -torch.inf).reshape(1, 1, L, L).to(cond_embeddings.device)
+                mask = self.mask
+                # patch_nums = [4] * (self.seq_len // self.block_size)
+                # L = sum(pn ** 2 for pn in patch_nums)
+                # d = torch.cat([torch.full((pn*pn,), i) for i, pn in enumerate(patch_nums)]).view(1, L, 1)
+                # dT = d.transpose(1, 2)
+                # mask = torch.where(d >= dT, 0., -torch.inf).reshape(1, 1, L, L).to(cond_embeddings.device)
             else:
                 mask = None # this leads to the casual mask
 
@@ -63,18 +73,26 @@ class Transformer_bin(nn.Module):
             h = self.tok_dropout(token_embeddings)
             h += self.pos_embedding[:h.shape[1]]
         else:
-            if self.block_prediction: raise NotImplementedError
             assert self.training==False
             if cond_idx is not None:
                 # prefill in inference
                 token_embeddings = self.cls_embedding(cond_idx, train=self.training)[:,:self.cls_token_num]
+                if self.block_prediction:
+                    token_embeddings = token_embeddings.repeat_interleave(self.block_size, dim=1)
             else:
                 # decode_n_tokens(kv cache) in inference
                 token_embeddings = self.tok_eb(binary_vec)
-            bs = token_embeddings.shape[0]
-            mask = self.causal_mask[:bs, None, input_pos]
-            h = self.tok_dropout(token_embeddings)
-            h += self.pos_embedding[input_pos]
+            if not self.block_prediction:
+                bs = token_embeddings.shape[0]
+                mask = self.causal_mask[:bs, None, input_pos]
+                h = self.tok_dropout(token_embeddings)
+                h += self.pos_embedding[input_pos]
+            else:
+                level_idx = input_pos
+                bs = token_embeddings.shape[0]
+                mask = self.mask[:, :, level_idx * self.block_size:(level_idx + 1) * self.block_size]
+                h = self.tok_dropout(token_embeddings)
+                h += self.pos_embedding[level_idx * self.block_size:(level_idx + 1) * self.block_size]
 
         for layer in self.layers:
             h = layer(h, mask=mask, input_pos=input_pos)
@@ -104,9 +122,14 @@ class Transformer_bin(nn.Module):
         self.max_batch_size = max_batch_size
         for b in self.layers:
             b.attention.kv_cache = KVCache(max_batch_size, max_seq_length, self.config.n_head, head_dim, dtype)
-        causal_mask = torch.tril(torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool))
-        self.causal_mask = causal_mask.unsqueeze(0).repeat(self.max_batch_size, 1, 1)
-        print('setup_cache done')
+        if not self.block_prediction:
+            causal_mask = torch.tril(torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool))
+            self.causal_mask = causal_mask.unsqueeze(0).repeat(self.max_batch_size, 1, 1)
+            print(f'block_prediction: {self.block_prediction}, setup_cache done')
+        else:
+            for b in self.layers:
+                b.attention.kv_cache.register_block_size(self.block_size)
+            print(f'block_prediction: {self.block_prediction}, setup_cache done')
 
 
 if __name__ == '__main__':
