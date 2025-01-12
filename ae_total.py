@@ -38,6 +38,9 @@ class AE_total(nn.Module):
             sd = torch.load(config.inner_ckpt, map_location="cpu", weights_only=True)
             sd = {k.replace('encoder.', 'encoder_1d.'): v for k, v in sd.items()}
             sd = {k.replace('decoder.', 'decoder_1d.'): v for k, v in sd.items()}
+            if config.skipped_keys:
+                sd = {k: v for k, v in sd.items() if k not in config.skipped_keys}
+
             self.load_state_dict(sd, strict=False)
 
     def get_feature_1d(self, x_BCHW):
