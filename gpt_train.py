@@ -139,11 +139,10 @@ def main():
                     entropy *= latent_mask
                 kl_divergence = (loss - entropy)
 
-                optimizer.zero_grad()
+                optimizer.zero_grad()                
+                accelerator.backward(loss.mean())
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
-                
-                accelerator.backward(loss.mean())
                 optimizer.step()
 
             if accelerator.sync_gradients:

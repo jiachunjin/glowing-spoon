@@ -27,7 +27,7 @@ class AE_total(nn.Module):
         self._init_from_ckpt(config)
 
         # temporally switch off the grad for mar encoder
-        self.encoder.requires_grad_(False)
+        # self.encoder.requires_grad_(False)
     
     def _init_from_ckpt(self, config):
         if config.outer_ckpt is not None:

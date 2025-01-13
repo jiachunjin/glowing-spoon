@@ -105,10 +105,9 @@ def main(config_path):
                     weighted_loss += complete_loss
 
                 optimizer.zero_grad()
+                accelerator.backward(weighted_loss.mean())
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
-                
-                accelerator.backward(weighted_loss.mean())
                 optimizer.step()
 
             if accelerator.sync_gradients:

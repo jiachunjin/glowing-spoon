@@ -19,7 +19,7 @@ def get_models(config):
     return autoencoder, hybrid_loss
 
 def get_accelerator(config):
-    output_dir = os.path.join('experiment', config.output_dir)
+    output_dir = os.path.join('/data/experiment', config.output_dir)
     os.makedirs(output_dir, exist_ok=True)
     logging_dir = os.path.join(output_dir, config.logging_dir)
     project_config = ProjectConfiguration(project_dir=config.output_dir, logging_dir=logging_dir)
@@ -104,9 +104,9 @@ def main(config_path):
                 loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
 
                 optimizer.zero_grad()
+                accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
-                accelerator.backward(loss_gen + loss_matryoshka)
                 optimizer.step()
                 # --------------------- optimize discriminator ---------------------
                 loss_disc = hybrid_loss(
@@ -116,9 +116,9 @@ def main(config_path):
                     global_step     = global_step+1,
                 )
                 optimizer_disc.zero_grad()
+                accelerator.backward(loss_disc)
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(disc_params, 1.0)
-                accelerator.backward(loss_disc)
                 optimizer_disc.step()
 
             if accelerator.sync_gradients:

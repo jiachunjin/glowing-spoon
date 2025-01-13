@@ -1,9 +1,9 @@
 autoencoder:
   vae_dim: &vae_dim 16
   num_latents: &num_latents 512
-  binary_dim: &binary_dim 32
-  outer_ckpt: 'pretrained_models/vae/kl16.ckpt'
-  inner_ckpt: 'experiment/AE_512_step_linear_32/AE-distill_MAR_VAE-2k'
+  binary_dim: &binary_dim 24
+  outer_ckpt:
+  inner_ckpt:
 
   encoder_1d:
     vae_dim: *vae_dim
@@ -20,14 +20,14 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'step_linear_32'
+    latents_mask_schedule: 'linear_24'
 
 hybrid_loss:
   disc_start: 1
   disc_weight: 0.05
 
 train:
-  resume_path:
+  resume_path: 'ckpts/AE-ae_total-10k'
   skipped_keys:
   # resume_path: 'experiment/ae_total/512_24/AE-ae_total-10k'
   # skipped_keys: ['encoder_1d.output.weight', 'encoder_1d.output.bias', 'encoder_1d.output.weight', encoder_1d.output.bias', 'decoder_1d.latents_mask', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
@@ -35,15 +35,16 @@ train:
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
   # output_dir: *exp_name
-  output_dir: 'ae_total/512_step_linear_32'
+  output_dir: 'ae_total/linear_24'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 4
   report_to: 'wandb'
-  num_iters: 10000
+  num_iters: 20000
   # val_every: 50
-  save_every: 5000
+  save_every: 1000
+  hp_matryoshka: 0.1
 
 data:
-  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  batch_size: 7
+  path: '/data/imagenet/imagenet-train-{000000..001281}.tar'
+  batch_size: 20
