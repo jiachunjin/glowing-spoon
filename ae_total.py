@@ -16,10 +16,10 @@ class AE_total(nn.Module):
         super().__init__()
         self.config = config
         # mar encoder
-        self.encoder = Encoder(ch_mult=(1, 1, 2, 2, 4), z_channels=16)
-        self.decoder = Decoder(ch_mult=(1, 1, 2, 2, 4), z_channels=16)
-        self.quant_conv = torch.nn.Conv2d(2 * 16, 2 * 16, 1)
-        self.post_quant_conv = torch.nn.Conv2d(16, 16, 1)
+        self.encoder = Encoder(ch_mult=(1, 1, 2, 2, 4), z_channels=config.vae_dim)
+        self.decoder = Decoder(ch_mult=(1, 1, 2, 2, 4), z_channels=config.vae_dim)
+        self.quant_conv = torch.nn.Conv2d(2 * config.vae_dim, 2 * config.vae_dim, 1)
+        self.post_quant_conv = torch.nn.Conv2d(config.vae_dim, config.vae_dim, 1)
         # 1d autoencoder
         self.encoder_1d = Encoder_1D(config.encoder_1d)
         self.decoder_1d = Decoder_1D_Matryoshka(config.decoder_1d)

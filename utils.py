@@ -120,6 +120,18 @@ def get_latents_mask(num_latents, input_dim, schedule):
             start = i * block_size
             end = (i + 1) * block_size
             mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == 'linear_64':
+        num_blocks = 64
+        block_size = 8
+        max_bits = 64
+        min_bits = 1
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(1, max_bits, num_blocks)).astype(int)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+        print(num_activated_bits)
     elif schedule == 'exp_32':
         # [2 3 4 6 8 12 18 26 32 32 32 32 32 32 32 32] tensor(10720.) 512x16 = 8192, 16x16x64 = 16384
         l = 16
