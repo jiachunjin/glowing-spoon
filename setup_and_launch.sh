@@ -4,9 +4,9 @@
 set -e
 # Step 1: Create and activate conda environment
 echo "Creating conda environment..."
-conda create -n bgpt python=3.8 -y
+conda create -n bingpt python=3.8 -y
 . $(conda info --base)/etc/profile.d/conda.sh
-conda activate bgpt
+conda activate bingpt
 
 # Step 2: Install required packages
 echo "Installing required packages..."
