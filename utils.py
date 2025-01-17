@@ -17,7 +17,7 @@ def get_dataloader(config):
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
     ])
     dataset = (
-        wds.WebDataset(config.path, resampled=True, shardshuffle=False, nodesplitter=None)
+        wds.WebDataset(config.path, resampled=False, shardshuffle=True, nodesplitter=None)
         .shuffle(2048)
         .decode("pil")
         .to_tuple("jpg", "cls")
