@@ -1,3 +1,6 @@
+One click launch on H100:
+sh setup_and_launch.sh
+
 ```
 conda create -n bgpt python=3.8
 conda activate bgpt

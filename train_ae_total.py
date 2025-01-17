@@ -19,7 +19,8 @@ def get_models(config):
     return autoencoder, hybrid_loss
 
 def get_accelerator(config):
-    output_dir = os.path.join('/data/experiment', config.output_dir)
+    # output_dir = os.path.join('/data/experiment', config.output_dir)
+    output_dir = os.path.join('experiment', config.output_dir)
     os.makedirs(output_dir, exist_ok=True)
     logging_dir = os.path.join(output_dir, config.logging_dir)
     project_config = ProjectConfiguration(project_dir=config.output_dir, logging_dir=logging_dir)

@@ -1,0 +1,1 @@
+accelerate launch --main_process_port 29507 train_ae_total.py --config 'configs/ae_total_64_h100.yaml'
