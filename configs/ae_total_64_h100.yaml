@@ -36,7 +36,7 @@ train:
   output_dir: 'ae_total/linear_64_z256'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 4
   report_to: 'wandb'
   num_iters: 240000
   save_every: 2000
