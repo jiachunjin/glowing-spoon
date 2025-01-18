@@ -38,7 +38,7 @@ train:
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 4
   report_to: 'wandb'
-  num_iters: 240000
+  num_iters: 100000
   save_every: 2000
   hp_matryoshka: 0.05
 
