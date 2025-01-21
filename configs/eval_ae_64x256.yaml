@@ -1,0 +1,23 @@
+autoencoder:
+  vae_dim: &vae_dim 256
+  num_latents: &num_latents 512
+  binary_dim: &binary_dim 64
+  outer_ckpt:
+  inner_ckpt:
+
+  encoder_1d:
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    output_dim: *binary_dim
+  decoder_1d:
+    binary_mode: true
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    input_dim: *binary_dim
+    latents_mask_schedule: 'linear_64'

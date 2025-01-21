@@ -9,7 +9,7 @@ from accelerate.utils import ProjectConfiguration
 
 from ae_total import AE_total
 from hybrid_loss import Hybrid_Loss
-from utils import get_dataloader, flatten_dict
+from utils import EMA, get_dataloader, flatten_dict
 
 
 def get_models(config):
@@ -68,14 +68,14 @@ def main(config_path):
 
     optimizer = torch.optim.AdamW(
         params_to_learn,
-        lr           = 1e-4,
+        lr           = 5e-5,
         betas        = (0.9, 0.95),
         weight_decay = 5e-2,
         eps          = 1e-8,
     )
     optimizer_disc = torch.optim.AdamW(
         disc_params,
-        lr           = 5e-6 / config.hybrid_loss.disc_weight,
+        lr           = 1e-6 / config.hybrid_loss.disc_weight,
         betas        = (0.9, 0.95),
         weight_decay = 5e-2,
         eps          = 1e-8,
@@ -85,6 +85,9 @@ def main(config_path):
         print('Number of learnable parameters: ', sum(p.numel() for p in params_to_learn if p.requires_grad))
     
     autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc = accelerator.prepare(autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc)
+
+    if accelerator.is_main_process:
+        ema = EMA(autoencoder.module, decay=0.999)
 
     if accelerator.is_main_process:
         if config.train.report_to == 'wandb':
@@ -123,6 +126,8 @@ def main(config_path):
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
                 optimizer.step()
+                if accelerator.is_main_process:
+                    ema.update(autoencoder.module)
                 # --------------------- optimize discriminator ---------------------
                 loss_disc = hybrid_loss(
                     inputs          = x,
@@ -154,8 +159,15 @@ def main(config_path):
                 autoencoder.eval()
                 state_dict = accelerator.unwrap_model(autoencoder).state_dict()
                 torch.save(state_dict, os.path.join(output_dir, f"AE-{config.train.exp_name}-{global_step // 1000}k"))
+
                 state_dict = accelerator.unwrap_model(hybrid_loss).state_dict()
                 torch.save(state_dict, os.path.join(output_dir, f"Loss-{config.train.exp_name}-{global_step // 1000}k"))
+
+                ema.apply_shadow()
+                ema.model.eval()
+                state_dict = ema.model.state_dict()
+                torch.save(state_dict, os.path.join(output_dir, f"EMA-{config.train.exp_name}-{global_step // 1000}k"))
+
 
             # if global_step > 0 and global_step % config.train.val_every == 0 and accelerator.is_main_process:
             #     # 会卡住，不知道为什么

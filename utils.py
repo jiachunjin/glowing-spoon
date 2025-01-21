@@ -17,8 +17,8 @@ def get_dataloader(config):
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
     ])
     dataset = (
-        wds.WebDataset(config.path, resampled=False, shardshuffle=True, nodesplitter=None)
-        .shuffle(2048)
+        wds.WebDataset(config.path, resampled=True, shardshuffle=True, nodesplitter=None)
+        .shuffle(128000) # 1/10 of the training set
         .decode("pil")
         .to_tuple("jpg", "cls")
         .map_tuple(llamagen_transform, None)
@@ -131,7 +131,6 @@ def get_latents_mask(num_latents, input_dim, schedule):
             start = i * block_size
             end = (i + 1) * block_size
             mask[start:end, :num_activated_bits[i]] = 1
-        print(num_activated_bits)
     elif schedule == 'exp_32':
         # [2 3 4 6 8 12 18 26 32 32 32 32 32 32 32 32] tensor(10720.) 512x16 = 8192, 16x16x64 = 16384
         l = 16
@@ -173,3 +172,24 @@ def get_latents_mask(num_latents, input_dim, schedule):
         raise ValueError(f'Unknown schedule: {schedule}')
     
     return mask
+
+import torch
+import torch.nn as nn
+
+class EMA:
+    def __init__(self, model: nn.Module, decay: float):
+        self.model = model
+        self.decay = decay
+        self.shadow = {name: param.clone().detach() for name, param in model.state_dict().items()}
+        
+    @torch.no_grad()
+    def update(self, model: nn.Module):
+        for name, param in model.state_dict().items():
+            if param.dtype.is_floating_point:  # Only update floating-point parameters
+                self.shadow[name] = self.decay * self.shadow[name] + (1.0 - self.decay) * param.detach()
+    
+    def apply_shadow(self):
+        """
+        Replace the model's parameters with the EMA parameters.
+        """
+        self.model.load_state_dict(self.shadow)

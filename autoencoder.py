@@ -330,7 +330,7 @@ class Decoder_1D_Matryoshka(nn.Module):
                 num_activated_latent = torch.tensor(latent_len).repeat(B).to(latents_BKd.device)
             else:
                 num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
-            print("Inference mode", num_activated_latent[0].item())
+            # print("Inference mode", num_activated_latent[0].item())
         L = num_mask_token + K
         attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
         attn_mask[:, :, :num_mask_token, :num_mask_token] = 0
