@@ -1,4 +1,5 @@
 import os
+import argparse
 import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
@@ -53,8 +54,8 @@ def get_accelerator(config):
 
     return accelerator, output_dir
 
-def main():
-    config = OmegaConf.load('configs/gpt_total.yaml')
+def main(config_path):
+    config = OmegaConf.load(config_path)
     accelerator, output_dir = get_accelerator(config.train)
     if config.total:
         autoencoder, gpt = get_models(config)
@@ -170,7 +171,8 @@ def main():
     accelerator.end_training()
 
     
-
-
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='configs/ae_total.yaml')
+    args = parser.parse_args()
+    main(args.config)

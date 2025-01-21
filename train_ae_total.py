@@ -187,24 +187,6 @@ def main(config_path):
     accelerator.end_training()
 
 
-def reconstrut_image(autoencoder):
-    import numpy as np
-    from PIL import Image
-    from torchvision.utils import make_grid
-    from torchvision.transforms import ToTensor
-
-    with torch.no_grad():
-        image = Image.open('assets/bear.png')
-        image = ToTensor()(image).unsqueeze(0)
-        image = image * 2 - 1
-        recon_full = autoencoder(image)
-        recon = torch.clamp((recon_full + 1) / 2, 0, 1)
-        chw = make_grid(recon, nrow=10, padding=0, pad_value=1.0)
-        chw = chw.permute(1, 2, 0).mul_(255).cpu().numpy()
-        chw = Image.fromarray(chw.astype(np.uint8))
-    
-    return chw
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/ae_total.yaml')
