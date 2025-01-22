@@ -86,7 +86,10 @@ class Transformer_bin(nn.Module):
                     token_embeddings = token_embeddings.repeat_interleave(self.block_size, dim=1)
             else:
                 # decode_n_tokens(kv cache) in inference
-                token_embeddings = self.tok_eb(binary_vec)
+                if self.config.independent_projection:
+                    token_embeddings = self.input_proj(binary_vec, input_pos)
+                else:
+                    token_embeddings = self.tok_eb(binary_vec)
             if not self.block_prediction:
                 bs = token_embeddings.shape[0]
                 mask = self.causal_mask[:bs, None, input_pos]
@@ -110,7 +113,11 @@ class Transformer_bin(nn.Module):
                 logits = self.output_proj(h[:, :-1, :]).float()
         else:
             assert self.training==False
-            logits = self.output(h).float()
+            if self.config.independent_projection:
+                logits = self.output_proj(h, input_pos).float()
+            else:
+                logits = self.output(h).float()
+                
 
         
         loss = None

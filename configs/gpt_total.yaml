@@ -36,7 +36,7 @@ gpt:
   # block_size:
   # block_size: 16
   independent_projection: true
-  block_size: 8
+  block_size: 4
   num_classes: 1000
   dim: 1024
   n_layer: 16
@@ -59,7 +59,7 @@ gpt:
 train:
   num_pred_bits:
   resume_path: 'experiment/gpt_causal_latents_incre/block_linear_64/GPT-gpt_newtok-25k'
-  skipped_keys:
+  skipped_keys: ['mask']
   # skipped_keys: ['tok_eb.weight', 'tok_eb.bias', 'output.weight', 'output.bias']
   global_step: 25001
   exp_name: &exp_name 'gpt_newtok'

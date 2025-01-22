@@ -33,7 +33,7 @@ def find_multiple(n: int, k: int):
 
 class Independent_Projection(nn.Module):
     def __init__(self, num_positions, input_dim, hidden_dim):
-        super(Independent_Projection, self).__init__()
+        super().__init__()
         self.num_positions = num_positions
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -42,11 +42,16 @@ class Independent_Projection(nn.Module):
         self.weight = nn.Parameter(torch.randn(num_positions, hidden_dim, input_dim))
         self.bias = nn.Parameter(torch.randn(num_positions, hidden_dim))
 
-    def forward(self, x):
+    def forward(self, x, input_pos=None):
         """
         x: [batch_size, num_positions, input_dim]
         """
-        output = torch.einsum('bij,ijk->bik', x, self.weight.transpose(1, 2)) + self.bias
+        if input_pos is not None:
+            weight = self.weight[input_pos]
+            bias = self.bias[input_pos]
+            output = torch.einsum('bij,ijk->bik', x, weight.transpose(1, 2)) + bias
+        else:
+            output = torch.einsum('bij,ijk->bik', x, self.weight.transpose(1, 2)) + self.bias
         return output  # [batch_size, num_positions, hidden_dim]
 
     def load_from_linear(self, weight, bias=None):
