@@ -9,6 +9,29 @@ def find_multiple(n: int, k: int):
         return n
     return n + k - (n % k)
 
+class Independent_Projection(nn.Module):
+    def __init__(self, num_positions, input_dim, hidden_dim):
+        super().__init__()
+        self.num_positions = num_positions
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+
+        self.projections = nn.ModuleList([
+            nn.Linear(input_dim, hidden_dim) for _ in range(num_positions)
+        ])
+
+    def forward(self, x):
+        """
+        x: [batch_size, num_positions, input_dim]
+        """
+        outputs = []
+        for pos in range(self.num_positions):
+            pos_projection = self.projections[pos](x[:, pos, :])
+            outputs.append(pos_projection)
+
+        return torch.stack(outputs, dim=1)  # [batch_size, num_positions, hidden_dim]
+
+
 class LabelEmbedder(nn.Module):
     """
     Embeds class labels into vector representations. Also handles label dropout for classifier-free guidance.

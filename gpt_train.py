@@ -69,7 +69,7 @@ def main(config_path):
         if config.train.skipped_keys:
             ckpt = {k: v for k, v in ckpt.items() if k not in config.train.skipped_keys}
         m, u = gpt.load_state_dict(ckpt, strict=False)
-        print('missing: ', m)
+        # print('missing: ', m)
         print('unexpected: ', u)
         if accelerator.is_main_process:
             print(f'GPT ckpt loaded from {config.train.resume_path}')

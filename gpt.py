@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from typing import Optional, List
 from einops import rearrange, repeat 
 
-from basic_gpt import LabelEmbedder, TransformerBlock, RMSNorm, KVCache
+from basic_gpt import LabelEmbedder, TransformerBlock, RMSNorm, KVCache, Independent_Projection
 
 
 class Transformer_bin(nn.Module):
@@ -26,15 +26,20 @@ class Transformer_bin(nn.Module):
         scale = self.dim ** -0.5
 
         self.cls_embedding = LabelEmbedder(self.num_classes, self.dim, config.class_dropout_prob)
-        self.pos_embedding = nn.Parameter(scale * torch.randn(681, self.dim)) # TODO
-        self.tok_eb = nn.Linear(config.input_dim, config.dim)
+        self.pos_eb = nn.Parameter(scale * torch.randn(self.seq_len, self.dim)) # TODO
         self.tok_dropout = nn.Dropout(config.token_dropout_p)
+
+        if config.independent_projection:
+            self.input_proj = Independent_Projection(config.seq_len, config.input_dim, config.dim)
+            self.output_proj = Independent_Projection(config.seq_len, config.dim, config.input_dim)
+        else:
+            self.tok_eb = nn.Linear(config.input_dim, config.dim)
+            self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
 
         self.layers = torch.nn.ModuleList()
         for _ in range(config.n_layer):
             self.layers.append(TransformerBlock(config))
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
-        self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
         if self.block_prediction:
             mask_size = self.seq_len
             block_size = self.block_size
@@ -68,10 +73,10 @@ class Transformer_bin(nn.Module):
             else:
                 mask = None # this leads to the casual mask
 
-            token_embeddings = self.tok_eb(binary_vec)
+            token_embeddings = self.input_proj(binary_vec)
             token_embeddings = torch.cat((cond_embeddings, token_embeddings), dim=1)
             h = self.tok_dropout(token_embeddings)
-            h += self.pos_embedding[:h.shape[1]]
+            h += self.pos_eb[:h.shape[1]]
         else:
             assert self.training==False
             if cond_idx is not None:
@@ -86,13 +91,13 @@ class Transformer_bin(nn.Module):
                 bs = token_embeddings.shape[0]
                 mask = self.causal_mask[:bs, None, input_pos]
                 h = self.tok_dropout(token_embeddings)
-                h += self.pos_embedding[input_pos]
+                h += self.pos_eb[input_pos]
             else:
                 level_idx = input_pos
                 bs = token_embeddings.shape[0]
                 mask = self.mask[:, :, level_idx * self.block_size:(level_idx + 1) * self.block_size]
                 h = self.tok_dropout(token_embeddings)
-                h += self.pos_embedding[level_idx * self.block_size:(level_idx + 1) * self.block_size]
+                h += self.pos_eb[level_idx * self.block_size:(level_idx + 1) * self.block_size]
 
         for layer in self.layers:
             h = layer(h, mask=mask, input_pos=input_pos)
@@ -100,9 +105,9 @@ class Transformer_bin(nn.Module):
         h = self.norm(h)
         if input_pos is None:
             if self.block_prediction:
-                logits = self.output(h[:, :-self.block_size, :]).float()
+                logits = self.output_proj(h[:, :-self.block_size, :]).float()
             else:
-                logits = self.output(h[:, :-1, :]).float()
+                logits = self.output_proj(h[:, :-1, :]).float()
         else:
             assert self.training==False
             logits = self.output(h).float()
