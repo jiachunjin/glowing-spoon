@@ -65,5 +65,5 @@ train:
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 80 # change
+  batch_size: 90 # change
 

@@ -71,6 +71,10 @@ def main(config_path):
         m, u = gpt.load_state_dict(ckpt, strict=False)
         # print('missing: ', m)
         print('unexpected: ', u)
+        if gpt.config.independent_projection:
+            gpt.input_proj.load_from_linear(ckpt['tok_eb.weight'], ckpt['tok_eb.bias'])
+            gpt.output_proj.load_from_linear(ckpt['output.weight'])
+            print('initialized independent projection')
         if accelerator.is_main_process:
             print(f'GPT ckpt loaded from {config.train.resume_path}')
     

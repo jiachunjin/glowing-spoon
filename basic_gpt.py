@@ -31,29 +31,63 @@ def find_multiple(n: int, k: int):
 
 #         return torch.stack(outputs, dim=1)  # [batch_size, num_positions, hidden_dim]
 
-
 class Independent_Projection(nn.Module):
     def __init__(self, num_positions, input_dim, hidden_dim):
-        super().__init__()
+        super(Independent_Projection, self).__init__()
         self.num_positions = num_positions
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
 
-        self.weight_embeddings = nn.Embedding(num_positions, input_dim * hidden_dim)
+        # 随机初始化位置嵌入的权重和偏置
+        self.weight = nn.Parameter(torch.randn(num_positions, hidden_dim, input_dim))
+        self.bias = nn.Parameter(torch.randn(num_positions, hidden_dim))
 
     def forward(self, x):
         """
         x: [batch_size, num_positions, input_dim]
         """
-        batch_size, num_positions, input_dim = x.shape
+        output = torch.einsum('bij,ijk->bik', x, self.weight.transpose(1, 2)) + self.bias
+        return output  # [batch_size, num_positions, hidden_dim]
 
-        position_ids = torch.arange(num_positions, device=x.device).unsqueeze(0).expand(batch_size, num_positions)
-        weight = self.weight_embeddings(position_ids)  # [batch_size, num_positions, input_dim * hidden_dim]
+    def load_from_linear(self, weight, bias=None):
+        """
+        从一个现有的 nn.Linear 加载权重到所有位置。
+        linear: nn.Linear
+        """
+        with torch.no_grad():
+            # 将 nn.Linear 的权重和偏置加载到每个位置
+            self.weight.data.copy_(
+                weight.unsqueeze(0).expand(self.num_positions, -1, -1)
+            )
+            if bias is not None:
+                self.bias.data.copy_(
+                    bias.unsqueeze(0).expand(self.num_positions, -1)
+                )
 
-        weight = weight.view(batch_size, num_positions, input_dim, -1)  # [batch_size, num_positions, input_dim, hidden_dim]
 
-        output = torch.einsum('bij,bijk->bik', x, weight)  # [batch_size, num_positions, hidden_dim]
-        return output
+
+# class Independent_Projection(nn.Module):
+#     def __init__(self, num_positions, input_dim, hidden_dim):
+#         super().__init__()
+#         self.num_positions = num_positions
+#         self.input_dim = input_dim
+#         self.hidden_dim = hidden_dim
+
+#         self.weight_embeddings = nn.Embedding(num_positions, input_dim * hidden_dim)
+
+#     def forward(self, x):
+#         """
+#         x: [batch_size, num_positions, input_dim]
+#         """
+#         batch_size, num_positions, input_dim = x.shape
+
+#         position_ids = torch.arange(num_positions, device=x.device).unsqueeze(0).expand(batch_size, num_positions)
+#         weight = self.weight_embeddings(position_ids)  # [batch_size, num_positions, input_dim * hidden_dim]
+
+#         weight = weight.view(batch_size, num_positions, input_dim, -1)  # [batch_size, num_positions, input_dim, hidden_dim]
+
+#         output = torch.einsum('bij,bijk->bik', x, weight)  # [batch_size, num_positions, hidden_dim]
+#         return output
 
 
 class LabelEmbedder(nn.Module):

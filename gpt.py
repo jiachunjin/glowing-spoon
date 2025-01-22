@@ -26,7 +26,7 @@ class Transformer_bin(nn.Module):
         scale = self.dim ** -0.5
 
         self.cls_embedding = LabelEmbedder(self.num_classes, self.dim, config.class_dropout_prob)
-        self.pos_eb = nn.Parameter(scale * torch.randn(self.seq_len, self.dim)) # TODO
+        self.pos_embedding = nn.Parameter(scale * torch.randn(681, self.dim)) # TODO
         self.tok_dropout = nn.Dropout(config.token_dropout_p)
 
         if config.independent_projection:
@@ -76,7 +76,7 @@ class Transformer_bin(nn.Module):
             token_embeddings = self.input_proj(binary_vec)
             token_embeddings = torch.cat((cond_embeddings, token_embeddings), dim=1)
             h = self.tok_dropout(token_embeddings)
-            h += self.pos_eb[:h.shape[1]]
+            h += self.pos_embedding[:h.shape[1]]
         else:
             assert self.training==False
             if cond_idx is not None:
@@ -91,13 +91,13 @@ class Transformer_bin(nn.Module):
                 bs = token_embeddings.shape[0]
                 mask = self.causal_mask[:bs, None, input_pos]
                 h = self.tok_dropout(token_embeddings)
-                h += self.pos_eb[input_pos]
+                h += self.pos_embedding[input_pos]
             else:
                 level_idx = input_pos
                 bs = token_embeddings.shape[0]
                 mask = self.mask[:, :, level_idx * self.block_size:(level_idx + 1) * self.block_size]
                 h = self.tok_dropout(token_embeddings)
-                h += self.pos_eb[level_idx * self.block_size:(level_idx + 1) * self.block_size]
+                h += self.pos_embedding[level_idx * self.block_size:(level_idx + 1) * self.block_size]
 
         for layer in self.layers:
             h = layer(h, mask=mask, input_pos=input_pos)
