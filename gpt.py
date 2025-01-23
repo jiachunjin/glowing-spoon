@@ -108,7 +108,7 @@ class Transformer_bin(nn.Module):
         for layer in self.layers:
             # print(h.shape, mask.shape)
             seq_len = h.shape[1]
-            h = layer(h, mask=mask[:, :, :seq_len, :seq_len], input_pos=input_pos)
+            h = layer(h, mask=mask[:, :, :, :], input_pos=input_pos)
 
         h = self.norm(h)
         if input_pos is None:

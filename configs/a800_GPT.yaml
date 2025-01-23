@@ -30,9 +30,9 @@ gpt:
   independent_projection: false
   block_size: 8
   num_classes: 1000
-  dim: 1024
-  n_layer: 16
-  n_head: 16
+  dim: 1536
+  n_layer: 24
+  n_head: 24
   seq_len: *num_latents
   norm_eps: 1e-5
   resid_dropout_p: 0.0
