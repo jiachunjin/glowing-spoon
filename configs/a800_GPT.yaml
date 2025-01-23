@@ -55,11 +55,11 @@ train:
   global_step: 
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'block_64_1536'
+  output_dir: 'linear_64_680M'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
-  report_to: 'no' # change
+  report_to: 'wandb' # change
   num_iters: 320000 # change
   save_every: 5000 # change
 
