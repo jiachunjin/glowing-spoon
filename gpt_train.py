@@ -132,16 +132,16 @@ def main(config_path):
                     else:
                         features_Bld = vae.get_feature(x)
                         probs, bits = autoencoder.get_probs_and_bits(features_Bld, latent_mask=latent_mask)
-                    probs = probs[:, :config.train.num_pred_bits, :]
-                    bits = bits[:, :config.train.num_pred_bits, :]
+                    probs = probs[:, :num_pred_bits, :]
+                    bits = bits[:, :num_pred_bits, :]
                     entropy = bernoulli_entropy(probs)
 
                 cond_idx = y.long()
 
                 _, loss = gpt(binary_vec=bits, cond_idx=cond_idx, targets=probs)
                 if 'latents_mask_schedule' in config.autoencoder.decoder_1d:
-                    loss *= latent_mask
-                    entropy *= latent_mask
+                    loss *= latent_mask[:, :num_pred_bits]
+                    entropy *= latent_mask[:, :num_pred_bits]
                 kl_divergence = (loss - entropy)
 
                 optimizer.zero_grad()                
