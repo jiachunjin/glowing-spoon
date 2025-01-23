@@ -27,8 +27,8 @@ autoencoder:
     latents_mask_schedule: 'linear_64'
 
 gpt:
-  independent_projection: true
-  block_size: 4
+  independent_projection: false
+  block_size: 8
   num_classes: 1000
   dim: 1024
   n_layer: 16
@@ -49,10 +49,10 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  num_pred_bits:
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-45k'
-  skipped_keys: ['mask']
-  global_step: 45001
+  num_pred_bits: 256
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-40k'
+  skipped_keys:
+  global_step: 40001
   exp_name: &exp_name 'gpt_newtok'
   wandb_proj: *exp_name
   output_dir: 'block_linear_64'

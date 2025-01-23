@@ -16,6 +16,7 @@ class Transformer_bin(nn.Module):
         self.n_layer = config.n_layer
         self.num_classes = config.num_classes
         self.cls_token_num = config.cls_token_num
+        self.independent_projection = config.independent_projection
         if config.block_size is None:
             self.block_prediction = False
             self.seq_len = config.seq_len + 1
@@ -72,8 +73,10 @@ class Transformer_bin(nn.Module):
                 # mask = torch.where(d >= dT, 0., -torch.inf).reshape(1, 1, L, L).to(cond_embeddings.device)
             else:
                 mask = None # this leads to the casual mask
-
-            token_embeddings = self.input_proj(binary_vec)
+            if self.independent_projection:
+                token_embeddings = self.input_proj(binary_vec)
+            else:
+                token_embeddings = self.tok_eb(binary_vec)
             token_embeddings = torch.cat((cond_embeddings, token_embeddings), dim=1)
             h = self.tok_dropout(token_embeddings)
             h += self.pos_embedding[:h.shape[1]]
@@ -86,7 +89,7 @@ class Transformer_bin(nn.Module):
                     token_embeddings = token_embeddings.repeat_interleave(self.block_size, dim=1)
             else:
                 # decode_n_tokens(kv cache) in inference
-                if self.config.independent_projection:
+                if self.independent_projection:
                     token_embeddings = self.input_proj(binary_vec, input_pos)
                 else:
                     token_embeddings = self.tok_eb(binary_vec)
@@ -113,7 +116,7 @@ class Transformer_bin(nn.Module):
                 logits = self.output_proj(h[:, :-1, :]).float()
         else:
             assert self.training==False
-            if self.config.independent_projection:
+            if self.independent_projection:
                 logits = self.output_proj(h, input_pos).float()
             else:
                 logits = self.output(h).float()
