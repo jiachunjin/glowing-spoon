@@ -50,20 +50,20 @@ gpt:
 
 train:
   num_pred_bits: 256
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-40k'
+  resume_path:
   skipped_keys:
-  global_step: 40001
-  exp_name: &exp_name 'gpt_newtok'
+  global_step: 
+  exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'block_linear_64'
+  output_dir: 'block_64_1536'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
-  report_to: 'wandb' # change
+  report_to: 'no' # change
   num_iters: 320000 # change
   save_every: 5000 # change
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 100 # change
+  batch_size: 50 # change
 
