@@ -49,7 +49,7 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  num_pred_bits: 256
+  num_pred_bits:
   resume_path:
   skipped_keys:
   global_step: 
