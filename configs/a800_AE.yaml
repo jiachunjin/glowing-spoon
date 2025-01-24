@@ -27,10 +27,11 @@ hybrid_loss:
   disc_weight: 0.03
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/EMA-ae_total-2k'
-  skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask', 'encoder_1d.output.weight', 'encoder_1d.output.bias', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/Loss-ae_total-2k'
-  global_step: 
+  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/AE-ae_total-2k'
+  skipped_keys: 
+  # skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask', 'encoder_1d.output.weight', 'encoder_1d.output.bias', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
+  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/Loss-ae_total-2k'
+  global_step: 2001
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
   output_dir: 'ae_total/768x32'
