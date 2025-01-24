@@ -1,6 +1,6 @@
 autoencoder:
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 512
+  num_latents: &num_latents 768
   binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
@@ -36,8 +36,8 @@ train:
   output_dir: 'ae_total/768x32'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 4
-  report_to: 'no'
+  gradient_accumulation_steps: 2
+  report_to: 'wandb'
   num_iters: 100000
   save_every: 1000
   hp_matryoshka: 0.05
