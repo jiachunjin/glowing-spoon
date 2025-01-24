@@ -27,7 +27,7 @@ class Transformer_bin(nn.Module):
         scale = self.dim ** -0.5
 
         self.cls_embedding = LabelEmbedder(self.num_classes, self.dim, config.class_dropout_prob)
-        self.pos_embedding = nn.Parameter(scale * torch.randn(681, self.dim)) # TODO
+        self.pos_embedding = nn.Parameter(scale * torch.randn(self.seq_len, self.dim)) # TODO
         self.tok_dropout = nn.Dropout(config.token_dropout_p)
 
         if config.independent_projection:
