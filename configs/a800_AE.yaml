@@ -28,13 +28,13 @@ hybrid_loss:
 
 train:
   resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/AE-ae_total-2k'
-  skipped_keys: 
+  # skipped_keys: 
   skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask']
   loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/Loss-ae_total-2k'
   global_step: 2001
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
-  output_dir: 'ae_total/768x32'
+  output_dir: 'ae_total/1024x32'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 2
