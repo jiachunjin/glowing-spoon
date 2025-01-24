@@ -1,6 +1,6 @@
 autoencoder:
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 512
+  num_latents: &num_latents 768
   binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
@@ -27,21 +27,21 @@ hybrid_loss:
   disc_weight: 0.03
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/EMA-ae_total-2k'
+  resume_path: 'pretrained_models/aliyun/EMA_2k'
   skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask', 'encoder_1d.output.weight', 'encoder_1d.output.bias', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/Loss-ae_total-2k'
+  loss_resume_path: 'experiment/ae_total/linear_64_z=256/Loss-ae_total-0k'
   global_step: 
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
-  output_dir: 'ae_total/768x32'
+  output_dir: 'ae_total/ema'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 2
   report_to: 'no'
   num_iters: 100000
   save_every: 1000
   hp_matryoshka: 0.05
 
 data:
-  path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 20
+  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
+  batch_size: 2

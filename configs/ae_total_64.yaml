@@ -29,7 +29,7 @@ hybrid_loss:
   disc_weight: 0.03
 
 train:
-  resume_path: 'pretrained_models/a800/aliyun/AE-ae_total-15k'
+  resume_path: 'pretrained_models/aliyun/EMA_2k'
   skipped_keys: 
   # skipped_keys: ['encoder.conv_out.weight', 'encoder.conv_out.bias', 'decoder.conv_in.weight', 'decoder.conv_in.bias', 'quant_conv.weight', 'quant_conv.bias', 'post_quant_conv.weight', 'post_quant_conv.bias', 'encoder_1d.patch_embed.weight', 'decoder_1d.output.weight', 'decoder_1d.output.bias']
   loss_resume_path:
@@ -39,14 +39,14 @@ train:
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
   # output_dir: *exp_name
-  output_dir: 'ae_total/linear_64_z=256'
+  output_dir: 'ae_total/1024'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 2
   report_to: 'no'
   num_iters: 100000
   # val_every: 50
-  save_every: 10
+  save_every: 1000
   # hp_matryoshka: 0.1
   hp_matryoshka: 0.05
 

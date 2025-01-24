@@ -30,9 +30,9 @@ gpt:
   independent_projection: false
   block_size: 8
   num_classes: 1000
-  dim: 1536
-  n_layer: 24
-  n_head: 24
+  dim: 1024
+  n_layer: 16
+  n_head: 16
   seq_len: *num_latents
   norm_eps: 1e-5
   resid_dropout_p: 0.0
@@ -49,7 +49,7 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  num_pred_bits:
+  num_pred_bits: 256
   resume_path:
   skipped_keys:
   global_step: 
@@ -65,5 +65,5 @@ train:
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 50 # change
+  batch_size: 100 # change
 
