@@ -1,6 +1,6 @@
 autoencoder:
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 1536
+  num_latents: &num_latents 2048
   binary_dim: &binary_dim 16
   outer_ckpt:
   inner_ckpt:
@@ -20,7 +20,7 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_1536_16'
+    latents_mask_schedule: 'linear_2048_16'
 
 hybrid_loss:
   disc_start: 1
@@ -34,7 +34,7 @@ train:
   global_step: 
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
-  output_dir: 'ae_total/1536x16'
+  output_dir: 'ae_total/2048_16'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
