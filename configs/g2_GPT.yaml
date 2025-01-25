@@ -1,0 +1,69 @@
+total: true
+autoencoder:
+  matryoshka: true
+  pretrained_ckpt_path: 'pretrained_models/aliyun/1024_5k'
+  vae_dim: &vae_dim 256
+  num_latents: &num_latents 1024
+  binary_dim: &binary_dim 32
+  outer_ckpt:
+  inner_ckpt:
+
+  encoder_1d:
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    output_dim: *binary_dim
+
+  decoder_1d:
+    binary_mode: true
+    vae_dim: *vae_dim
+    embed_dim: 512
+    num_layers: 8
+    num_latents: *num_latents
+    num_heads: 8
+    input_dim: *binary_dim
+    latents_mask_schedule: 'linear_1024_32'
+
+gpt:
+  independent_projection: false
+  block_size: 16
+  num_classes: 1000
+  dim: 1024
+  n_layer: 16
+  n_head: 16
+  seq_len: *num_latents
+  norm_eps: 1e-5
+  resid_dropout_p: 0.0
+  token_dropout_p: 0.0
+  attn_dropout_p: 0.0
+  drop_path_rate: 0.0
+  ffn_dropout_p: 0.0
+  
+  class_dropout_prob: 0.1
+  cls_token_num: 1
+  input_dim: *binary_dim
+  multiple_of: 256
+  n_kv_head:
+  ffn_dim_multiplier:
+
+train:
+  num_pred_bits:
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-40k'
+  skipped_keys: []
+  global_step: 
+  exp_name: &exp_name 'GPT_A800'
+  wandb_proj: *exp_name
+  output_dir: 'linear_1024_32'
+  logging_dir: 'logs'
+  mixed_precision: 'bf16'
+  gradient_accumulation_steps: 1 # change
+  report_to: 'wandb' # change
+  num_iters: 320000 # change
+  save_every: 5000 # change
+
+data:
+  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
+  batch_size: 100 # change
+
