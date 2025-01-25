@@ -153,9 +153,9 @@ def get_latents_mask(num_latents, input_dim, schedule):
             start = i * block_size
             end = (i + 1) * block_size
             mask[start:end, :num_activated_bits[i]] = 1
-    elif schedule == 'linear_1024_16':
+    elif schedule == 'linear_1536_16':
         num_blocks = 64
-        block_size = 16
+        block_size = 24
         max_bits = 16
         min_bits = 1
         mask = torch.zeros(num_blocks*block_size, max_bits)
