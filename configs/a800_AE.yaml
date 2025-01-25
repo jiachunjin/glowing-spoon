@@ -45,4 +45,4 @@ train:
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 20
+  batch_size: 15
