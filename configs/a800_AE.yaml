@@ -2,23 +2,23 @@ autoencoder:
   vae_dim: &vae_dim 256
   num_latents: &num_latents 1024
   binary_dim: &binary_dim 16
-  outer_ckpt: '/root/codebase/glowing-spoon/experiment/ae_total/ema/EMA-ae_total-2k'
+  outer_ckpt:
   inner_ckpt:
 
   encoder_1d:
     vae_dim: *vae_dim
-    embed_dim: 1024
-    num_layers: 16
+    embed_dim: 512
+    num_layers: 8
     num_latents: *num_latents
-    num_heads: 16
+    num_heads: 8
     output_dim: *binary_dim
   decoder_1d:
     binary_mode: true
     vae_dim: *vae_dim
-    embed_dim: 1024
-    num_layers: 16
+    embed_dim: 512
+    num_layers: 8
     num_latents: *num_latents
-    num_heads: 16
+    num_heads: 8
     input_dim: *binary_dim
     latents_mask_schedule: 'linear_1024_16'
 
@@ -27,10 +27,10 @@ hybrid_loss:
   disc_weight: 0.03
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/AE-ae_total-2k'
+  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/EMA-ae_total-2k'
   # reused_keys: []
-  # skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask', 'encoder_1d.output.weight', 'encoder_1d.output.bias', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/768x32/Loss-ae_total-2k'
+  skipped_keys: ['encoder_1d.latents', 'decoder_1d.latents_pos_embed', 'decoder_1d.latents_mask', 'encoder_1d.output.weight', 'encoder_1d.output.bias', 'decoder_1d.input.weight', 'decoder_1d.input.bias']
+  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/ema/Loss-ae_total-2k'
   global_step: 
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
@@ -38,11 +38,11 @@ train:
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
-  report_to: 'wandb'
+  report_to: 'no'
   num_iters: 100000
   save_every: 1000
-  hp_matryoshka: 0.05
+  hp_matryoshka: 1
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 15
+  batch_size: 25
