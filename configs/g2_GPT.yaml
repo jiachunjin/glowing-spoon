@@ -1,10 +1,10 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: 'pretrained_models/aliyun/1024_5k'
+  pretrained_ckpt_path: 'pretrained_models/aliyun/2048_5k'
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 1024
-  binary_dim: &binary_dim 32
+  num_latents: &num_latents 2048
+  binary_dim: &binary_dim 16
   outer_ckpt:
   inner_ckpt:
 
@@ -24,11 +24,11 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_1024_32'
+    latents_mask_schedule: 'linear_2048_16'
 
 gpt:
   independent_projection: false
-  block_size: 16
+  block_size: 32
   num_classes: 1000
   dim: 1024
   n_layer: 16
