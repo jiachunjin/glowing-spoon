@@ -34,7 +34,9 @@ class AE_total(nn.Module):
     
     def _init_from_ckpt(self, config):
         if config.outer_ckpt is not None:
-            sd = torch.load(config.outer_ckpt, map_location="cpu", weights_only=True)["model"]
+            sd = torch.load(config.outer_ckpt, map_location="cpu", weights_only=True)
+            sd = {k: v for k, v in sd.items() if k.startswith('encoder.') or k.startswith('decoder.')}
+
             self.load_state_dict(sd, strict=False)
 
         if config.inner_ckpt is not None:
