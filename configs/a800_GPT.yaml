@@ -49,19 +49,19 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  num_pred_bits: 128
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_24/GPT-GPT_A800-2k'
+  num_pred_bits: 256
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_24_pre_128/GPT-GPT_A800-4k'
   skipped_keys:
   global_step: 
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'linear_1024_24_pre_128'
+  output_dir: 'linear_1024_24_pre_256'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
   report_to: 'no' # change
   num_iters: 320000 # change
-  save_every: 2000 # change
+  save_every: 5000 # change
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'

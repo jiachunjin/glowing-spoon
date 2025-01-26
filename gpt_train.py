@@ -143,8 +143,9 @@ def main(config_path):
                     loss *= latent_mask[:, :num_pred_bits]
                     entropy *= latent_mask[:, :num_pred_bits]
                 kl_divergence = (loss - entropy)
+                kl_divergence_pre_128 = (loss - entropy)[:, :128]
 
-                optimizer.zero_grad()                
+                optimizer.zero_grad()
                 accelerator.backward(loss.mean())
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
@@ -155,10 +156,12 @@ def main(config_path):
                 progress_bar.update(1)
                 loss = accelerator.gather(loss.detach()).mean().item()
                 kl_divergence = accelerator.gather(kl_divergence.detach()).mean().item()
+                kl_divergence_pre_128 = accelerator.gather(kl_divergence_pre_128.detach()).mean().item()
 
                 logs = dict(
                     loss          = loss,
                     kl_divergence = kl_divergence,
+                    kl_divergence_pre_128 = kl_divergence_pre_128,
                 )
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
