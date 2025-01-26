@@ -50,8 +50,8 @@ gpt:
 
 train:
   num_pred_bits: 128
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-40k'
-  skipped_keys: ['pos_embedding', 'tok_eb.weight', 'output.weight', 'tok_eb.bias']
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_24/GPT-GPT_A800-2k'
+  skipped_keys:
   global_step: 
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
