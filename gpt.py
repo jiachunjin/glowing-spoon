@@ -108,7 +108,8 @@ class Transformer_bin(nn.Module):
                 h += self.pos_embedding[level_idx * self.block_size:(level_idx + 1) * self.block_size]
 
         for layer in self.layers:
-            h = layer(h, mask=mask[:, :, :, :], input_pos=input_pos)
+            seq_len = h.shape[1]
+            h = layer(h, mask=mask[:, :, :seq_len, :seq_len], input_pos=input_pos)
 
         h = self.norm(h)
         if input_pos is None:
