@@ -48,6 +48,7 @@ class Independent_Projection(nn.Module):
         """
         seq_len = x.shape[1]
         if input_pos is not None:
+            raise NotImplementedError
             weight = self.weight[input_pos]
             bias = self.bias[input_pos]
             output = torch.einsum('bij,ijk->bik', x, weight.transpose(1, 2)) + bias
