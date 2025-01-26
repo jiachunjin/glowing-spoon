@@ -84,7 +84,7 @@ class Transformer_bin(nn.Module):
             assert self.training==False
             if cond_idx is not None:
                 # prefill in inference
-                token_embeddings = self.cls_embedding(cond_idx, train=self.training)[:,:self.cls_token_num]
+                token_embeddings = self.cls_embedding(cond_idx, train=False)
                 if self.block_prediction:
                     token_embeddings = token_embeddings.repeat_interleave(self.block_size, dim=1)
             else:
