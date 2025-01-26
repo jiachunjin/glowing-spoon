@@ -107,7 +107,7 @@ def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, latent_mask, device
         max_batch_size_cfg = max_batch_size * 2 if cfg_scale > 1.0 else max_batch_size
         gpt.setup_caches(max_batch_size=max_batch_size_cfg, max_seq_length=max_seq_length, dtype=gpt.pos_embedding.dtype)
 
-    seq = torch.empty((max_batch_size, max_new_tokens, gpt.config.input_dim), dtype=torch.float, device=device)
+    seq = torch.zeros((max_batch_size, max_new_tokens, gpt.config.input_dim), dtype=torch.float, device=device)
 
     level_idx = 0
     input_pos = torch.tensor([level_idx], device=device)

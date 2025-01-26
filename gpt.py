@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from typing import Optional, List
 from einops import rearrange, repeat 
 
-from basic_gpt import LabelEmbedder, TransformerBlock, RMSNorm, KVCache, Independent_Projection
+from basic_gpt import LabelEmbedder, TransformerBlock, RMSNorm, KVCache, Independent_Projection, IO_FFN
 
 
 class Transformer_bin(nn.Module):
@@ -34,8 +34,10 @@ class Transformer_bin(nn.Module):
             self.input_proj = Independent_Projection(config.seq_len, config.input_dim, config.dim)
             self.output_proj = Independent_Projection(config.seq_len, config.dim, config.input_dim)
         else:
-            self.tok_eb = nn.Linear(config.input_dim, config.dim)
-            self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
+            self.tok_eb = IO_FFN(config.input_dim, config.dim, config.dim)
+            self.output = IO_FFN(config.dim, config.dim, config.input_dim)
+            # self.tok_eb = nn.Linear(config.input_dim, config.dim)
+            # self.output = nn.Linear(config.dim, config.input_dim, bias=False) # TODO
 
         self.layers = torch.nn.ModuleList()
         for _ in range(config.n_layer):
@@ -123,8 +125,6 @@ class Transformer_bin(nn.Module):
                 logits = self.output_proj(h, input_pos).float()
             else:
                 logits = self.output(h).float()
-                
-
         
         loss = None
         if valid is not None:
