@@ -46,12 +46,13 @@ class Independent_Projection(nn.Module):
         """
         x: [batch_size, num_positions, input_dim]
         """
+        seq_len = x.shape[1]
         if input_pos is not None:
             weight = self.weight[input_pos]
             bias = self.bias[input_pos]
             output = torch.einsum('bij,ijk->bik', x, weight.transpose(1, 2)) + bias
         else:
-            output = torch.einsum('bij,ijk->bik', x, self.weight.transpose(1, 2)) + self.bias
+            output = torch.einsum('bij,ijk->bik', x, self.weight[:seq_len].transpose(1, 2)) + self.bias[:seq_len]
         return output  # [batch_size, num_positions, hidden_dim]
 
     def load_from_linear(self, weight, bias=None):

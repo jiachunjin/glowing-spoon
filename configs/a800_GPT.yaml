@@ -27,7 +27,7 @@ autoencoder:
     latents_mask_schedule: 'linear_1024_24'
 
 gpt:
-  independent_projection: false
+  independent_projection: true
   block_size: 16
   num_classes: 1000
   dim: 1024
