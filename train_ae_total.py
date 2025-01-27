@@ -163,10 +163,10 @@ def main(config_path):
                 state_dict = accelerator.unwrap_model(hybrid_loss).state_dict()
                 torch.save(state_dict, os.path.join(output_dir, f"Loss-{config.train.exp_name}-{global_step // 1000}k"))
 
-                ema.apply_shadow()
-                ema.model.eval()
-                state_dict = ema.model.state_dict()
-                torch.save(state_dict, os.path.join(output_dir, f"EMA-{config.train.exp_name}-{global_step // 1000}k"))
+                # ema.apply_shadow()
+                # ema.model.eval()
+                # state_dict = ema.model.state_dict()
+                # torch.save(state_dict, os.path.join(output_dir, f"EMA-{config.train.exp_name}-{global_step // 1000}k"))
             accelerator.wait_for_everyone()
 
             # if global_step > 0 and global_step % config.train.val_every == 0 and accelerator.is_main_process:

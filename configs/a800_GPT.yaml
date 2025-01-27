@@ -1,9 +1,9 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear_1024_24/AE-ae_total-20k'
+  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear_512_24'
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 1024
+  num_latents: &num_latents 512
   binary_dim: &binary_dim 24
   outer_ckpt:
   inner_ckpt:
@@ -24,10 +24,10 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_1024_24'
+    latents_mask_schedule: 'linear_24'
 
 gpt:
-  independent_projection: true
+  independent_projection: false
   block_size: 16
   num_classes: 1000
   dim: 1024
@@ -49,13 +49,13 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  num_pred_bits: 1024
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_24_pre_128/GPT-GPT_A800-4k'
+  num_pred_bits:
+  resume_path:
   skipped_keys:
   global_step: 
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'linear_1024_24_pre_256'
+  output_dir: 'linear_24_classic'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
@@ -65,6 +65,6 @@ train:
 
 data:
   # path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  path: '/root/data/imagenet/imagenet-train-{000000..00100}.tar'
+  path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
   batch_size: 75 # change
 
