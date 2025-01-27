@@ -28,6 +28,7 @@ class Transformer_bin(nn.Module):
 
         self.cls_embedding = LabelEmbedder(self.num_classes, self.dim, config.class_dropout_prob)
         self.pos_embedding = nn.Parameter(scale * torch.randn(self.seq_len, self.dim)) # TODO
+        # self.pos_embedding = nn.Parameter(scale * torch.randn(681, self.dim)) # TODO
         self.tok_dropout = nn.Dropout(config.token_dropout_p)
 
         if config.independent_projection:
@@ -109,8 +110,8 @@ class Transformer_bin(nn.Module):
 
         for layer in self.layers:
             seq_len = h.shape[1]
-            h = layer(h, mask=mask[:, :, :seq_len, :seq_len], input_pos=input_pos)
-            # h = layer(h, mask=mask[:, :, :, :], input_pos=input_pos)
+            # h = layer(h, mask=mask[:, :, :seq_len, :seq_len], input_pos=input_pos)
+            h = layer(h, mask=mask[:, :, :, :], input_pos=input_pos)
 
         h = self.norm(h)
         if input_pos is None:

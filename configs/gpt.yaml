@@ -30,6 +30,9 @@ autoencoder:
     # latents_mask_schedule: 'flat_exp_32'
 
 gpt:
+  independent_projection: false
+  block_size: 16
+  seq_len: 512
   dim: 1024
   n_layer: 16
   n_head: 16
