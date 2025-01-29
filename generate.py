@@ -77,6 +77,7 @@ def decode_one_token(gpt, x, input_pos, cfg_scale, latent_mask=None):
         logits, _ = gpt(x, cond_idx=None, input_pos=input_pos)
    
     bits = torch.bernoulli(F.sigmoid(logits))
+    # bits = F.sigmoid(logits) > 0.5
     bits = bits * 2 - 1
 
     if latent_mask is not None:

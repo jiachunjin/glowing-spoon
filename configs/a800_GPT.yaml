@@ -1,10 +1,11 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear_512_24'
+  pretrained_ckpt_path: 'pretrained_models/aliyun/EMA_2k'
+  # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
   vae_dim: &vae_dim 256
   num_latents: &num_latents 512
-  binary_dim: &binary_dim 24
+  binary_dim: &binary_dim 64
   outer_ckpt:
   inner_ckpt:
 
@@ -24,7 +25,7 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_24'
+    latents_mask_schedule: 'linear_64'
 
 gpt:
   independent_projection: false
@@ -64,7 +65,7 @@ train:
   save_every: 5000 # change
 
 data:
+  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
   # path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
   batch_size: 75 # change
 
