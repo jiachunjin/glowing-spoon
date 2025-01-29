@@ -1,8 +1,8 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear64_hp_matryoshka_10'
-  # pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
+  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear64_hp_matryoshka_10'
+  pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
   # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
   vae_dim: &vae_dim 256
   num_latents: &num_latents 512
