@@ -1,11 +1,13 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: 'pretrained_models/aliyun/EMA_2k'
+  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear64_hp_matryoshka_10'
+  # pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
   # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
   vae_dim: &vae_dim 256
   num_latents: &num_latents 512
   binary_dim: &binary_dim 64
+  # binary_dim: &binary_dim 24
   outer_ckpt:
   inner_ckpt:
 
@@ -26,10 +28,11 @@ autoencoder:
     num_heads: 8
     input_dim: *binary_dim
     latents_mask_schedule: 'linear_64'
+    # latents_mask_schedule: 'linear_24'
 
 gpt:
   independent_projection: false
-  block_size: 16
+  block_size: 8
   num_classes: 1000
   dim: 1024
   n_layer: 16
@@ -51,12 +54,12 @@ gpt:
 
 train:
   num_pred_bits:
-  resume_path:
-  skipped_keys:
-  global_step: 
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/block_linear_64/GPT-gpt_newtok-40k'
+  skipped_keys: ['pos_embedding']
+  global_step: 40001
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'linear_24_classic'
+  output_dir: 'linear_64_hp10'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
