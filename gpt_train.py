@@ -136,8 +136,8 @@ def main(config_path):
                     bits = bits[:, :num_pred_bits, :]
                     # random flip the bits
                     flip_mask = torch.rand_like(bits, dtype=torch.float, device=bits.device) < config.train.flip_prob
-                    bits = bits ^ flip_mask.long()
-
+                    bits = bits.long() ^ flip_mask.long()
+                    bits = bits.float()
                     entropy = bernoulli_entropy(probs)
 
                 cond_idx = y.long()

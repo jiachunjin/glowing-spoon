@@ -58,7 +58,7 @@ gpt:
 train:
   flip_prob: 0.1
   num_pred_bits:
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_32_hp5/GPT-GPT_A800-80k'
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/linear_1024_32_hp5_last281k/GPT-GPT_A800-80k'
   skipped_keys:
   global_step: 80001
   exp_name: &exp_name 'GPT_A800'
