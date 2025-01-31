@@ -1,9 +1,10 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5/AE-ae_total-10k'
-  # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_10k'
+  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5/AE-ae_total-10k'
+  pretrained_ckpt_path: 'pretrained_models/1024x32/ae_10k'
   # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
+  # pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
   vae_dim: &vae_dim 256
   # num_latents: &num_latents 512
   num_latents: &num_latents 1024
@@ -35,6 +36,7 @@ autoencoder:
 
 gpt:
   independent_projection: false
+  # block_size: 8
   block_size: 16
   num_classes: 1000
   dim: 1024

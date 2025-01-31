@@ -1,0 +1,11 @@
+__pycache__/
+.vscode/
+assets/
+experiment/
+pretrained_models/
+wandb/
+*.ipynb
+*.txt
+rfid.py
+evaluator.py
+check_wds.py

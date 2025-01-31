@@ -259,3 +259,6 @@ class EMA:
         Replace the model's parameters with the EMA parameters.
         """
         self.model.load_state_dict(self.shadow)
+
+    def save_shadow(self, path: str):
+        torch.save(self.shadow, path)
