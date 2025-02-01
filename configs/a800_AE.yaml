@@ -1,7 +1,9 @@
 autoencoder:
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 1024
-  binary_dim: &binary_dim 32
+  # num_latents: &num_latents 1024
+  num_latents: &num_latents 512
+  # binary_dim: &binary_dim 32
+  binary_dim: &binary_dim 64
   outer_ckpt:
   inner_ckpt:
 
@@ -20,21 +22,22 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_1024_32'
+    # latents_mask_schedule: 'linear_1024_32'
+    latents_mask_schedule: 'linear_64'
 
 hybrid_loss:
-  disc_start: 1
+  disc_start: 1000
   disc_weight: 0.05
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/AE-ae_total-25k'
+  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear64_hp_matryoshka_10/AE-ae_total-5k'
   # skipped_keys: []
   skipped_keys:
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/Loss-ae_total-25k'
+  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/linear64_hp_matryoshka_10/Loss-ae_total-5k'
   global_step: 1
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
-  output_dir: 'ae_total/1024x32_hp5_decoderonly'
+  output_dir: 'linear64_hp5'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
@@ -45,4 +48,4 @@ train:
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 40
+  batch_size: 20

@@ -1,16 +1,17 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/AE-ae_total-5k'
+  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/AE-ae_total-5k'
+  # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_do_5k'
   # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_10k'
   # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
-  # pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
+  pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
   vae_dim: &vae_dim 256
-  # num_latents: &num_latents 512
-  num_latents: &num_latents 1024
-  # binary_dim: &binary_dim 64
+  num_latents: &num_latents 512
+  # num_latents: &num_latents 1024
+  binary_dim: &binary_dim 64
   # binary_dim: &binary_dim 24
-  binary_dim: &binary_dim 32
+  # binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
 
@@ -30,14 +31,14 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    # latents_mask_schedule: 'linear_64'
+    latents_mask_schedule: 'linear_64'
     # latents_mask_schedule: 'linear_24'
-    latents_mask_schedule: 'linear_1024_32'
+    # latents_mask_schedule: 'linear_1024_32'
 
 gpt:
   independent_projection: false
-  # block_size: 8
-  block_size: 16
+  block_size: 8
+  # block_size: 16
   num_classes: 1000
   dim: 1024
   n_layer: 16
