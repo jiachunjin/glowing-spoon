@@ -27,10 +27,10 @@ class AE_total(nn.Module):
         self._init_from_ckpt(config)
 
         # temporally switch off the grad for mar encoder
-        # self.encoder.requires_grad_(False)
-        # self.quant_conv.requires_grad_(False)
-        # self.encoder_1d.requires_grad_(False)
-        # self.decoder_1d.requires_grad_(False)
+        self.encoder.requires_grad_(False)
+        self.quant_conv.requires_grad_(False)
+        self.encoder_1d.requires_grad_(False)
+        self.decoder_1d.requires_grad_(False)
         # self.post_quant_conv.requires_grad_(False)
         # self.decoder.requires_grad_(False)
     
@@ -77,6 +77,17 @@ class AE_total(nn.Module):
             z = rearrange(feature_1d_recon, 'b (h w) c -> b c h w', h=16)
             z = self.post_quant_conv(z)
             recon = self.decoder(z)
+
+        return recon
+
+    def forward_decoder_only(self, x_BCHW):
+        with torch.no_grad():
+            feature_1d = self.get_feature_1d(x_BCHW)
+            latents = self.encoder_1d(feature_1d)
+        feature_1d_recon = self.decoder_1d(latents, num_activated_latent=None)
+        z = rearrange(feature_1d_recon, 'b (h w) c -> b c h w', h=16)
+        z = self.post_quant_conv(z)
+        recon = self.decoder(z)
 
         return recon
 

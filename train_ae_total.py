@@ -109,7 +109,8 @@ def main(config_path):
             autoencoder.train()
             hybrid_loss.train()
             with accelerator.accumulate([autoencoder, hybrid_loss]):
-                recon_full, recon_matryoshka = autoencoder(x)
+                # recon_full, recon_matryoshka = autoencoder(x)
+                recon_full = autoencoder.module.forward_decoder_only(x)
                 # --------------------- optimize autoencoder ---------------------
                 loss_gen = hybrid_loss(
                     inputs          = x,
@@ -119,7 +120,8 @@ def main(config_path):
                     last_layer      = autoencoder.module.decoder.last_layer
                 )
 
-                loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
+                # loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
+                loss_matryoshka = 0
 
                 optimizer.zero_grad()
                 accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
