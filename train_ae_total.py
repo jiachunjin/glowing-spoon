@@ -68,14 +68,14 @@ def main(config_path):
 
     optimizer = torch.optim.AdamW(
         params_to_learn,
-        lr           = 5e-5,
+        lr           = 1e-5,
         betas        = (0.9, 0.95),
         weight_decay = 5e-2,
         eps          = 1e-8,
     )
     optimizer_disc = torch.optim.AdamW(
         disc_params,
-        lr           = 5e-6 / config.hybrid_loss.disc_weight,
+        lr           = 1e-6 / config.hybrid_loss.disc_weight,
         betas        = (0.9, 0.95),
         weight_decay = 5e-2,
         eps          = 1e-8,
@@ -109,8 +109,8 @@ def main(config_path):
             autoencoder.train()
             hybrid_loss.train()
             with accelerator.accumulate([autoencoder, hybrid_loss]):
-                recon_full, recon_matryoshka = autoencoder(x)
-                # recon_full = autoencoder.module.forward_decoder_only(x)
+                # recon_full, recon_matryoshka = autoencoder(x)
+                recon_full = autoencoder.module.forward_decoder_only(x)
                 # --------------------- optimize autoencoder ---------------------
                 loss_gen = hybrid_loss(
                     inputs          = x,
@@ -120,8 +120,8 @@ def main(config_path):
                     last_layer      = autoencoder.module.decoder.last_layer
                 )
 
-                loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
-                # loss_matryoshka = 0
+                # loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
+                loss_matryoshka = 0
 
                 optimizer.zero_grad()
                 accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
@@ -148,12 +148,12 @@ def main(config_path):
                 progress_bar.update(1)
                 loss_gen = accelerator.gather(loss_gen.detach()).mean().item()
                 loss_disc = accelerator.gather(loss_disc.detach()).mean().item()
-                loss_matryoshka = accelerator.gather(loss_matryoshka.detach()).mean().item()
+                # loss_matryoshka = accelerator.gather(loss_matryoshka.detach()).mean().item()
 
                 logs = dict()
                 logs['loss_gen'] = loss_gen
                 logs['loss_disc'] = loss_disc
-                logs['loss_matryoshka'] = loss_matryoshka
+                # logs['loss_matryoshka'] = loss_matryoshka
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 

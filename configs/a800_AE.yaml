@@ -31,21 +31,21 @@ hybrid_loss:
   disc_weight: 0.03
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/EMA-ae_total-5k'
+  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/EMA-ae_total-10k'
   # skipped_keys: []
   skipped_keys:
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/Loss-ae_total-5k'
-  global_step: 77001
+  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/EMA-ae_total-10k/Loss-ae_total-10k'
+  global_step: 
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
-  output_dir: 'linear_1024_32'
+  output_dir: 'linear_1024_32_do'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
   report_to: 'no'
   num_iters: 100000
   save_every: 1000
-  hp_matryoshka: 3
+  hp_matryoshka: 5
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
