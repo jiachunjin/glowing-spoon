@@ -31,20 +31,20 @@ hybrid_loss:
   disc_weight: 0.05
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/EMA-ae_total-25k'
+  resume_path: '/root/codebase/glowing-spoon/experiment/linear_1024_36/AE-ae_total-73k'
   # skipped_keys: []
   skipped_keys:
-  loss_resume_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_cont/EMA-ae_total-25k/Loss-ae_total-25k'
-  global_step: 1
+  loss_resume_path: ''/root/codebase/glowing-spoon/experiment/linear_1024_36/Loss-ae_total-73k'
+  global_step: 73001
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
   output_dir: 'linear_1024_36'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 4
   report_to: 'no'
   num_iters: 100000
-  save_every: 2000
+  save_every: 1000
   hp_matryoshka: 5
 
 data:
