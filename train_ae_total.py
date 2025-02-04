@@ -107,6 +107,7 @@ def main(config_path):
             if global_step <= config.train.warm_up_step:
                 # wait for the batches to mix
                 global_step += 1
+                progress_bar.update(1)
                 continue
             autoencoder.train()
             hybrid_loss.train()
