@@ -106,6 +106,7 @@ def main(config_path):
         for x, y in dataloader:
             if global_step <= config.train.warm_up_step:
                 # wait for the batches to mix
+                global_step += 1
                 continue
             autoencoder.train()
             hybrid_loss.train()
