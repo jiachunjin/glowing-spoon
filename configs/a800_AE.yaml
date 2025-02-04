@@ -28,14 +28,14 @@ autoencoder:
 
 hybrid_loss:
   disc_start: 1000
-  disc_weight: 0.05
+  disc_weight: 0.03
 
 train:
-  resume_path: '/root/codebase/glowing-spoon/experiment/linear_1024_36/AE-ae_total-73k'
+  resume_path: '/root/codebase/glowing-spoon/experiment/linear_1024_36/AE-ae_total-77k'
   # skipped_keys: []
   skipped_keys:
-  loss_resume_path: ''/root/codebase/glowing-spoon/experiment/linear_1024_36/Loss-ae_total-73k'
-  global_step: 73001
+  loss_resume_path: '/root/codebase/glowing-spoon/experiment/linear_1024_36/Loss-ae_total-77k'
+  global_step: 77001
   exp_name: &exp_name 'ae_total'
   wandb_proj: *exp_name
   output_dir: 'linear_1024_36'

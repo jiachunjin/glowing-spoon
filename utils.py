@@ -164,7 +164,7 @@ def get_latents_mask(num_latents, input_dim, schedule):
             start = i * block_size
             end = (i + 1) * block_size
             mask[start:end, :num_activated_bits[i]] = 1
-        print(num_activated_bits)
+        # print(num_activated_bits)
     elif schedule == 'linear_1536_16':
         num_blocks = 64
         block_size = 24
