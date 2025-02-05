@@ -123,8 +123,8 @@ def main(config_path):
                     last_layer      = autoencoder.module.decoder.last_layer
                 )
 
-                loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
-                # loss_matryoshka = 0
+                # loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
+                loss_matryoshka = 0
 
                 optimizer.zero_grad()
                 accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
@@ -151,12 +151,12 @@ def main(config_path):
                 progress_bar.update(1)
                 loss_gen = accelerator.gather(loss_gen.detach()).mean().item()
                 loss_disc = accelerator.gather(loss_disc.detach()).mean().item()
-                loss_matryoshka = accelerator.gather(loss_matryoshka.detach()).mean().item()
+                # loss_matryoshka = accelerator.gather(loss_matryoshka.detach()).mean().item()
 
                 logs = dict()
                 logs['loss_gen'] = loss_gen
                 logs['loss_disc'] = loss_disc
-                logs['loss_matryoshka'] = loss_matryoshka
+                # logs['loss_matryoshka'] = loss_matryoshka
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
