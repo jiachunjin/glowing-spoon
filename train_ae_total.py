@@ -127,8 +127,7 @@ def main(config_path):
                 # loss_matryoshka = 0
 
                 optimizer.zero_grad()
-                accelerator.backward(loss_gen + 0 * loss_matryoshka)
-                # accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
+                accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(params_to_learn, 1.0)
                 optimizer.step()

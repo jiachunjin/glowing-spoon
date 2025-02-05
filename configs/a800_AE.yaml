@@ -42,12 +42,12 @@ train:
   output_dir: 'linear_1024_32_new'
   logging_dir: 'logs'
   mixed_precision: 'no'
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 1
   report_to: 'no'
   num_iters: 100000
   save_every: 2000
-  hp_matryoshka: 5
+  hp_matryoshka: 1
 
 data:
   path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 32
+  batch_size: 16
