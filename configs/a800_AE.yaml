@@ -41,7 +41,7 @@ train:
   wandb_proj: *exp_name
   output_dir: 'linear_1024_32_new'
   logging_dir: 'logs'
-  mixed_precision: 'no'
+  mixed_precision: 'bf16'
   gradient_accumulation_steps: 1
   report_to: 'no'
   num_iters: 100000
