@@ -14,7 +14,7 @@ from utils import EMA, get_dataloader, flatten_dict
 
 def get_models(config):
     autoencoder = AE_total(config=config.autoencoder)
-    hybrid_loss = Hybrid_Loss(disc_start=config.hybrid_loss.disc_start, disc_weight=config.hybrid_loss.disc_weight)
+    hybrid_loss = Hybrid_Loss(disc_start=config.hybrid_loss.disc_start, disc_weight=config.hybrid_loss.disc_weight, perceptual_weight=1.1)
 
     return autoencoder, hybrid_loss
 
@@ -112,8 +112,8 @@ def main(config_path):
             autoencoder.train()
             hybrid_loss.train()
             with accelerator.accumulate([autoencoder, hybrid_loss]):
-                recon_full, recon_matryoshka = autoencoder(x)
-                # recon_full = autoencoder.module.forward_decoder_only(x)
+                # recon_full, recon_matryoshka = autoencoder(x)
+                recon_full = autoencoder.module.forward_decoder_only(x)
                 # --------------------- optimize autoencoder ---------------------
                 loss_gen = hybrid_loss(
                     inputs          = x,
