@@ -63,7 +63,7 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  flip_prob: 0.1
+  flip_prob: 0.2
   num_pred_bits:
   resume_path: '/root/codebase/gpt/glowing-spoon/experiment/1024x32_final/GPT-GPT_A800-100k'
   skipped_keys:
@@ -77,7 +77,7 @@ train:
   report_to: 'wandb' # change
   num_iters: 320000 # change
   save_every: 5000 # change
-  val_every: 10 # change
+  val_every: 5000 # change
 
 data:
   # path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'

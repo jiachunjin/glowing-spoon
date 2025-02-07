@@ -193,16 +193,16 @@ def main(config_path):
                     transforms.ToPILImage()
                 ])
 
-                # with torch.no_grad():
-                    # for lable in tqdm(labels):
-                    #     cond = torch.tensor([lable]*50).to(accelerator.device)
-                    #     with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                    #         out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
-                    #     with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                    #         recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
-                    #         for id, rec in enumerate(recon_full):
-                    #             rec = inverse_transform(rec)
-                    #             rec.save(f'eval_imgs/gen/{rank}_{lable}_{id}.png')                
+                with torch.no_grad():
+                    for lable in tqdm(labels):
+                        cond = torch.tensor([lable]*50).to(accelerator.device)
+                        with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                            out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                        with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                            recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
+                            for id, rec in enumerate(recon_full):
+                                rec = inverse_transform(rec)
+                                rec.save(f'eval_imgs/gen/{rank}_{lable}_{id}.png')                
                 print('done')
                 accelerator.wait_for_everyone()
 
