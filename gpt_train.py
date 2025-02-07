@@ -176,6 +176,57 @@ def main(config_path):
                 torch.save(state_dict, os.path.join(output_dir, f"GPT-{config.train.exp_name}-{global_step // 1000}k"))
             accelerator.wait_for_everyone()
 
+            if global_step > 0 and global_step % config.train.val_every == 0:
+                from torchvision import transforms
+                from generate import generate_blockwise
+                cfg_scale = 1
+
+                gpt.eval()
+                rank = accelerator.state.local_process_index
+                world_size = accelerator.state.num_processes
+
+                labels = torch.arange(rank, 1000, world_size).to(accelerator.device)
+
+                inverse_transform = transforms.Compose([
+                    transforms.Normalize(mean=[-1, -1, -1], std=[2, 2, 2]),
+                    transforms.Lambda(lambda x: x.clamp(0, 1)),
+                    transforms.ToPILImage()
+                ])
+
+                with torch.no_grad():
+                    for lable in tqdm(labels):
+                        cond = torch.tensor([lable]*50).to(accelerator.device)
+                        with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                            out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                        with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                            recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
+                            for id, rec in enumerate(recon_full):
+                                rec = inverse_transform(rec)
+                                rec.save(f'assets/gen_total/{rank}_{lable}_{id}.png')                
+                print('done')
+                accelerator.wait_for_everyone()
+
+                if accelerator.is_main_process:
+                    import subprocess
+                    command = [
+                        "python", "-m", "pytorch_fid",
+                        "/root/codebase/gpt/glowing-spoon/eval_imgs/ori",
+                        "/root/codebase/gpt/glowing-spoon/eval_imgs/gen",
+                        "--device", "cuda:7"
+                    ]
+
+                    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+                    for line in process.stdout:
+                        print(line)
+                    fid = float(line.split()[-1])
+
+                    # 等待进程结束
+                    process.wait()
+                    fid_log = {'FID': fid}
+                    accelerator.log(fid_log, step=global_step)
+                    print(f'FID at {global_step}: {fid}')
+
             if global_step >= config.train.num_iters:
                 training_done = True
                 break
