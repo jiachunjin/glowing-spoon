@@ -125,6 +125,7 @@ def main(config_path):
     flip_prob = config.train.flip_prob
     if accelerator.is_main_process:
         print(f'Flip probability: {flip_prob}')
+        print(f'Warm the dataloader for {config.train.warm_up_step} steps')
     while not training_done:
         for x, y in dataloader:
             if global_step <= config.train.warm_up_step:
@@ -187,7 +188,7 @@ def main(config_path):
             if global_step > 0 and global_step % config.train.val_every == 0:
                 from torchvision import transforms
                 from generate import generate_blockwise
-                cfg_scale = 1
+                cfg_scale = 2
 
                 gpt.eval()
                 rank = accelerator.state.local_process_index
