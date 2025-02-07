@@ -122,6 +122,9 @@ def main(config_path):
         )
         latent_mask = latent_mask.unsqueeze(0).to(accelerator.device)
 
+    flip_prob = config.train.flip_prob
+    if accelerator.is_main_process:
+        print(f'Flip probability: {flip_prob}')
     while not training_done:
         for x, y in dataloader:
             gpt.train()
@@ -135,7 +138,7 @@ def main(config_path):
                     probs = probs[:, :num_pred_bits, :]
                     bits = bits[:, :num_pred_bits, :]
                     # random flip the bits
-                    flip_mask = torch.rand_like(bits, dtype=torch.float, device=bits.device) > config.train.flip_prob
+                    flip_mask = torch.rand_like(bits, dtype=torch.float, device=bits.device) > flip_prob
                     flip_mask = flip_mask.float() * 2 - 1 # {0, 1} -> {-1, 1}
                     bits *= flip_mask
                     entropy = bernoulli_entropy(probs)
@@ -225,6 +228,10 @@ def main(config_path):
                     fid_log = {'FID': fid}
                     accelerator.log(fid_log, step=global_step)
                     print(f'FID at {global_step}: {fid}')
+                flip_prob *= config.train.flip_decay
+                if accelerator.is_main_process:
+                    print(f'Flip probability: {flip_prob}')
+
             accelerator.wait_for_everyone()
 
             if global_step >= config.train.num_iters:
