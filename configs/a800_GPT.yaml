@@ -65,6 +65,7 @@ gpt:
 train:
   flip_prob: 0.1
   flip_decay: 0.99
+  warm_up_step: 1000
   num_pred_bits:
   resume_path: '/root/codebase/gpt/glowing-spoon/experiment/1024x32_final/GPT-GPT_A800-100k'
   skipped_keys:

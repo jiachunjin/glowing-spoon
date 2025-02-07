@@ -127,6 +127,11 @@ def main(config_path):
         print(f'Flip probability: {flip_prob}')
     while not training_done:
         for x, y in dataloader:
+            if global_step <= config.train.warm_up_step:
+                # wait for the batches to mix
+                global_step += 1
+                progress_bar.update(1)
+                continue
             gpt.train()
             with accelerator.accumulate([gpt]):
                 with torch.no_grad():
