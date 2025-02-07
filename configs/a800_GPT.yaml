@@ -63,13 +63,13 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  flip_prob: 0.08
-  flip_decay: 0.99
-  warm_up_step: 132000
+  flip_prob: 0.05
+  flip_decay: 0.98
+  warm_up_step: 137000
   num_pred_bits:
-  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/1024x32_final/GPT-GPT_A800-130k'
+  resume_path: '/root/codebase/gpt/glowing-spoon/experiment/1024x32_final/GPT-GPT_A800-135k'
   skipped_keys:
-  global_step: 130001
+  global_step: 135001
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
   output_dir: '1024x32_final'
