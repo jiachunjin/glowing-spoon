@@ -120,5 +120,6 @@ def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, latent_mask, device
     generated_tokens, _ = decode_n_tokens(gpt, next_token, input_pos, num_blocks-2, cfg_scale, latent_mask, verbose=verbose)
     
     seq[:, (level_idx)*block_size:] = torch.cat(generated_tokens, dim=1)
+    gpt.remove_caches()
 
     return seq

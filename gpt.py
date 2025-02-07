@@ -151,6 +151,11 @@ class Transformer_bin(nn.Module):
             for b in self.layers:
                 b.attention.kv_cache.register_block_size(self.block_size)
             # print(f'block_prediction: {self.block_prediction}, setup_cache done')
+    
+    def remove_caches(self):
+        for b in self.layers:
+            b.attention.kv_cache = None
+        
 
 
 if __name__ == '__main__':
