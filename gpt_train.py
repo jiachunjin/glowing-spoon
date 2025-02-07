@@ -202,7 +202,7 @@ def main(config_path):
                             recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
                             for id, rec in enumerate(recon_full):
                                 rec = inverse_transform(rec)
-                                rec.save(f'assets/gen_total/{rank}_{lable}_{id}.png')                
+                                rec.save(f'eval_imgs/gen/{rank}_{lable}_{id}.png')                
                 print('done')
                 accelerator.wait_for_everyone()
 

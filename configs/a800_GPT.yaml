@@ -74,10 +74,10 @@ train:
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
-  report_to: 'no' # change
+  report_to: 'wandb' # change
   num_iters: 320000 # change
   save_every: 5000 # change
-  val_every: 100 # change
+  val_every: 10 # change
 
 data:
   # path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
