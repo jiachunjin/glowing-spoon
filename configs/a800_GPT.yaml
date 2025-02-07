@@ -1,7 +1,9 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/linear_1024_32_new/EMA-ae_total-6k'
+  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/linear_1024_32_new/EMA-ae_total-6k'
+  pretrained_ckpt_path: 'pretrained_models/rush1024x32/ema_6k_new'
+
   # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/AE-ae_total-5k'
   # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/linear64_hp5/EMA-ae_total-5k'
   # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_do_5k'

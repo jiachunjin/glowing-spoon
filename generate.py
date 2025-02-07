@@ -53,9 +53,9 @@ def prefill(gpt, cond_idx: torch.Tensor, input_pos: torch.Tensor, cfg_scale: flo
     return bits
 
 
-def decode_n_tokens(gpt, cur_token, input_pos, num_new_tokens, cfg_scale, latent_mask):
+def decode_n_tokens(gpt, cur_token, input_pos, num_new_tokens, cfg_scale, latent_mask, verbose=False):
     new_tokens, new_probs = [], []
-    for i in trange(num_new_tokens):
+    for i in trange(num_new_tokens, disable=verbose==False):
         with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True): # Actually better for Inductor to codegen attention here
             next_token = decode_one_token(gpt, cur_token, input_pos, cfg_scale, latent_mask)
             input_pos += 1
@@ -89,7 +89,7 @@ def decode_one_token(gpt, x, input_pos, cfg_scale, latent_mask=None):
 
 
 @torch.no_grad()
-def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, latent_mask, device):
+def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, latent_mask, device, verbose=True):
     assert gpt.block_prediction
     block_size = gpt.block_size # 16
     num_blocks = gpt.seq_len // block_size
@@ -117,7 +117,7 @@ def generate_blockwise(gpt, cond, max_new_tokens, cfg_scale, latent_mask, device
     level_idx += 1
 
     input_pos = torch.tensor([level_idx], device=device, dtype=torch.int)
-    generated_tokens, _ = decode_n_tokens(gpt, next_token, input_pos, num_blocks-2, cfg_scale, latent_mask)
+    generated_tokens, _ = decode_n_tokens(gpt, next_token, input_pos, num_blocks-2, cfg_scale, latent_mask, verbose=verbose)
     
     seq[:, (level_idx)*block_size:] = torch.cat(generated_tokens, dim=1)
 

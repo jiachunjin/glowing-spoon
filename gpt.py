@@ -146,11 +146,11 @@ class Transformer_bin(nn.Module):
         if not self.block_prediction:
             causal_mask = torch.tril(torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool))
             self.causal_mask = causal_mask.unsqueeze(0).repeat(self.max_batch_size, 1, 1)
-            print(f'block_prediction: {self.block_prediction}, setup_cache done')
+            # print(f'block_prediction: {self.block_prediction}, setup_cache done')
         else:
             for b in self.layers:
                 b.attention.kv_cache.register_block_size(self.block_size)
-            print(f'block_prediction: {self.block_prediction}, setup_cache done')
+            # print(f'block_prediction: {self.block_prediction}, setup_cache done')
 
 
 if __name__ == '__main__':
