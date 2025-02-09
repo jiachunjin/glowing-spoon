@@ -9,4 +9,7 @@ wandb/
 rfid.py
 evaluator.py
 check_wds.py
+eval_images/
+pretrained_ckpts/
+tmp.sh
 *.tar

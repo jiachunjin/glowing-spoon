@@ -1,9 +1,12 @@
-One click launch on H100:
-
+Preparation on H100 (setup environment, download datasets and ckpts):
 ```
-sh setup_and_launch.sh
+sh setup_H100.sh
 ```
-
+Launch training on H100:
+```
+sh train_GPT_H100.sh
+```
+---
 ```
 conda create -n bgpt python=3.8
 conda activate bgpt

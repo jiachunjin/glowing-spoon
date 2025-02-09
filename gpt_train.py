@@ -69,8 +69,9 @@ def main(config_path):
         if config.train.skipped_keys:
             ckpt = {k: v for k, v in ckpt.items() if k not in config.train.skipped_keys}
         m, u = gpt.load_state_dict(ckpt, strict=False)
-        # print('missing: ', m)
-        print('unexpected: ', u)
+        if accelerator.is_main_process:
+            print('missing: ', m)
+            print('unexpected: ', u)
         if gpt.config.independent_projection:
             gpt.input_proj.load_from_linear(ckpt['tok_eb.weight'], ckpt['tok_eb.bias'])
             gpt.output_proj.load_from_linear(ckpt['output.weight'], ckpt['output.bias'])
@@ -125,7 +126,7 @@ def main(config_path):
     flip_prob = config.train.flip_prob
     if accelerator.is_main_process:
         print(f'Flip probability: {flip_prob}')
-        print(f'Warm the dataloader for {config.train.warm_up_step} steps')
+        print(f'Warmup the dataloader for {config.train.warm_up_step} steps')
     while not training_done:
         for x, y in dataloader:
             if global_step <= config.train.warm_up_step:
@@ -203,24 +204,23 @@ def main(config_path):
                 ])
 
                 with torch.no_grad():
-                    for lable in tqdm(labels):
-                        cond = torch.tensor([lable]*50).to(accelerator.device)
+                    for label in tqdm(labels):
+                        cond = torch.tensor([label]*50).to(accelerator.device)
                         with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
                             out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
                         with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
                             recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
                             for id, rec in enumerate(recon_full):
                                 rec = inverse_transform(rec)
-                                rec.save(f'eval_imgs/gen/{rank}_{lable}_{id}.png')                
-                print('done')
+                                rec.save(f'eval_images/assets/gen/{rank}_{label}_{id}.png')
                 accelerator.wait_for_everyone()
 
                 if accelerator.is_main_process:
                     import subprocess
                     command = [
                         "python", "-m", "pytorch_fid",
-                        "/root/codebase/gpt/glowing-spoon/eval_imgs/ori",
-                        "/root/codebase/gpt/glowing-spoon/eval_imgs/gen",
+                        "eval_images/assets/ori",
+                        "eval_images/assets/gen",
                         "--device", "cuda:7"
                     ]
 
@@ -229,16 +229,16 @@ def main(config_path):
                     for line in process.stdout:
                         print(line)
                     fid = float(line.split()[-1])
-                    # 等待进程结束
                     process.wait()
                     fid_log = {'FID': fid}
                     accelerator.log(fid_log, step=global_step)
                     print(f'FID at {global_step}: {fid}')
+            accelerator.wait_for_everyone()
+
+            if global_step > 0 and global_step % config.train.flip_decay_every == 0:
                 flip_prob *= config.train.flip_decay
                 if accelerator.is_main_process:
                     print(f'Flip probability: {flip_prob}')
-
-            accelerator.wait_for_everyone()
 
             if global_step >= config.train.num_iters:
                 training_done = True
