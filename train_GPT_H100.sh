@@ -1,3 +1,4 @@
+conda activate bingpt
 # Config accelerate
 echo "Configuring accelerate (non-interactive)..."
 cat <<EOT > ~/.cache/huggingface/accelerate/default_config.yaml
