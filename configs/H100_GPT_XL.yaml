@@ -52,11 +52,11 @@ train:
   flip_prob: 0.048 # TBD
   flip_decay: 0.98 # TBD
   flip_decay_every: 5000 # TBD
-  warm_up_step: 0
+  warm_up_step: 22000
   num_pred_bits:
   resume_path: /data-fast/Xlarge_v1_1.6B/GPT-GPT_H100-20k
   skipped_keys:
-  global_step: 19999
+  global_step: 20001
   exp_name: &exp_name 'GPT_H100'
   wandb_proj: *exp_name
   output_dir: '/data-fast/Xlarge_1.6B'

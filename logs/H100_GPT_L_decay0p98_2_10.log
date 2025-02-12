@@ -4,7 +4,7 @@ GPT ckpt loaded from /data-fast/large_682M_v1_decay0p98_2/GPT-GPT_H100-90k
 Number of learnable parameters:  682787360
 Number of predicted tokens: 1024
 Flip probability: 0.0415
-Warmup the dataloader for 0 steps
-[1;34mwandb[0m: 
-[1;34mwandb[0m: 🚀 View run [33mlilac-gorge-32[0m at: [34mhttps://wandb.ai/lily-falcon/GPT_H100/runs/s0pqdi86[0m
-[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250212_090924-s0pqdi86/logs[0m
+Warmup the dataloader for 89999 steps
+Flip probability: 0.040670000000000005
+FID at 100000: 0.0
+Flip probability: 0.039856600000000006
