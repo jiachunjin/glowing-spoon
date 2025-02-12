@@ -227,14 +227,19 @@ def main(config_path):
                             "python", "-m", "pytorch_fid",
                             f"{config.train.ori_path}",
                             f"{output_dir}/gen",
-                            "--device", "cuda:7"
+                            "--device", "cuda:0"
                         ]
 
                         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
+                        last_line = None
                         for line in process.stdout:
                             print(line)
-                        fid = float(line.split()[-1])
+                            last_line = line
+                        if last_line is not None:
+                            fid = float(last_line.split()[-1])
+                        else:
+                            fid = 0.0
                         process.wait()
                         fid_log = {'FID': fid}
                         accelerator.log(fid_log, step=global_step)
