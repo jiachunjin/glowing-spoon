@@ -180,69 +180,75 @@ def main(config_path):
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
-            if global_step > 0 and global_step % config.train.save_every == 0 and accelerator.is_main_process:
-                gpt.eval()
-                state_dict = accelerator.unwrap_model(gpt).state_dict()
-                torch.save(state_dict, os.path.join(output_dir, f"GPT-{config.train.exp_name}-{global_step // 1000}k"))
-            accelerator.wait_for_everyone()
-
-            if global_step > 0 and global_step % config.train.val_every == 0:
-                from torchvision import transforms
-                from generate import generate_blockwise
-                cfg_scale = 2
-
-                gpt.eval()
-                rank = accelerator.state.local_process_index
-                world_size = accelerator.state.num_processes
-
-                labels = torch.arange(rank, 1000, world_size).to(accelerator.device)
-
-                inverse_transform = transforms.Compose([
-                    transforms.Normalize(mean=[-1, -1, -1], std=[2, 2, 2]),
-                    transforms.Lambda(lambda x: x.clamp(0, 1)),
-                    transforms.ToPILImage()
-                ])
-
-                with torch.no_grad():
-                    for label in tqdm(labels):
-                        cond = torch.tensor([label]*50).to(accelerator.device)
-                        with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                            out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
-                        with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                            recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
-                            for id, rec in enumerate(recon_full):
-                                rec = inverse_transform(rec)
-                                rec.save(f'/data-fast/data_gen_exp/eval_images/assets/gen/{rank}_{label}_{id}.png')
+                if global_step > 0 and global_step % config.train.save_every == 0 and accelerator.is_main_process:
+                    gpt.eval()
+                    state_dict = accelerator.unwrap_model(gpt).state_dict()
+                    torch.save(state_dict, os.path.join(output_dir, f"GPT-{config.train.exp_name}-{global_step // 1000}k"))
                 accelerator.wait_for_everyone()
 
-                if accelerator.is_main_process:
-                    import subprocess
-                    command = [
-                        "python", "-m", "pytorch_fid",
-                        "/data-fast/data_gen_exp/eval_images/assets/ori",
-                        "/data-fast/data_gen_exp/eval_images/assets/gen",
-                        "--device", "cuda:7"
-                    ]
+                if global_step > 0 and global_step % config.train.val_every == 0:
+                    from torchvision import transforms
+                    from generate import generate_blockwise
+                    cfg_scale = 2
+                    # make a directory for generated images at output_dir/gen, exists_ok=True
+                    os.makedirs(os.path.join(output_dir, 'gen'), exist_ok=True)
+                    # if the directory exists, clear it
+                    os.system(f'rm -rf {os.path.join(output_dir, "gen")}/*')
+                    assert len(os.listdir(os.path.join(output_dir, 'gen'))) == 0, "the evaluation directory is not empty"
 
-                    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    gpt.eval()
+                    rank = accelerator.state.local_process_index
+                    world_size = accelerator.state.num_processes
 
-                    for line in process.stdout:
-                        print(line)
-                    fid = float(line.split()[-1])
-                    process.wait()
-                    fid_log = {'FID': fid}
-                    accelerator.log(fid_log, step=global_step)
-                    print(f'FID at {global_step}: {fid}')
-            accelerator.wait_for_everyone()
+                    labels = torch.arange(rank, 1000, world_size).to(accelerator.device)
 
-            if global_step > 0 and global_step % config.train.flip_decay_every == 0:
-                flip_prob *= config.train.flip_decay
-                if accelerator.is_main_process:
-                    print(f'Flip probability: {flip_prob}')
+                    inverse_transform = transforms.Compose([
+                        transforms.Normalize(mean=[-1, -1, -1], std=[2, 2, 2]),
+                        transforms.Lambda(lambda x: x.clamp(0, 1)),
+                        transforms.ToPILImage()
+                    ])
 
-            if global_step >= config.train.num_iters:
-                training_done = True
-                break
+                    with torch.no_grad():
+                        for label in tqdm(labels):
+                            cond = torch.tensor([label]*50).to(accelerator.device)
+                            with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                                out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                            with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                                recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
+                                for id, rec in enumerate(recon_full):
+                                    rec = inverse_transform(rec)
+                                    rec.save(f'{output_dir}/gen/{rank}_{label}_{id}.png')
+                    accelerator.wait_for_everyone()
+
+                    if accelerator.is_main_process:
+                        import subprocess
+                        assert len(os.listdir(os.path.join(output_dir, 'gen'))) == 50000, "the number of generated images is not correct"
+                        command = [
+                            "python", "-m", "pytorch_fid",
+                            f"{config.train.ori_path}",
+                            f"{output_dir}/gen",
+                            "--device", "cuda:7"
+                        ]
+
+                        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+                        for line in process.stdout:
+                            print(line)
+                        fid = float(line.split()[-1])
+                        process.wait()
+                        fid_log = {'FID': fid}
+                        accelerator.log(fid_log, step=global_step)
+                        print(f'FID at {global_step}: {fid}')
+                accelerator.wait_for_everyone()
+
+                if global_step > 0 and global_step % config.train.flip_decay_every == 0:
+                    flip_prob *= config.train.flip_decay
+                    if accelerator.is_main_process:
+                        print(f'Flip probability: {flip_prob}')
+
+                if global_step >= config.train.num_iters:
+                    training_done = True
+                    break
     accelerator.end_training()
 
     

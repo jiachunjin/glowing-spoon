@@ -36,9 +36,12 @@ def generate_ddp():
     # cfg_scale = 2.5 11.908764673298833
     # cfg_scale = 1.5 11.162830936462854
 
-    gpt_ckpt_path = 'pretrained_models/gpt_1024x32/gpt_80k'
+    # gpt_ckpt_path = 'pretrained_models/gpt_1024x32/gpt_80k'
     # cfg_scale = 1 28.616402281830744
-    cfg_scale = 2
+    # cfg_scale = 2
+    
+    gpt_ckpt_path = 'pretrained_models/gpt_1024x32/GPT-GPT_A800-285k'
+    cfg_scale = 1
     
 
     gpt = Transformer_bin(config.gpt)

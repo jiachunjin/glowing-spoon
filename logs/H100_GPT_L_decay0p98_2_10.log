@@ -1,65 +1,10 @@
 missing:  []
 unexpected:  []
-GPT ckpt loaded from /data-fast/large_682M_v1_decay0p98/GPT-GPT_H100-50k
+GPT ckpt loaded from /data-fast/large_682M_v1_decay0p98_2/GPT-GPT_H100-90k
 Number of learnable parameters:  682787360
 Number of predicted tokens: 1024
-Flip probability: 0.045
-Warmup the dataloader for 52000 steps
-FID:  6.211343093737241
-
-FID at 60000: 6.211343093737241
-Flip probability: 0.0441
-FID:  17.359132517692103
-
-FID at 60000: 17.359132517692103
-Flip probability: 0.043218
-FID at 60000: 17.359132517692103
-Flip probability: 0.04235364
-FID:  17.453011535173232
-
-FID at 60000: 17.453011535173232
-Flip probability: 0.0415065672
-FID at 70000: 17.453011535173232
-Flip probability: 0.040676435856
-FID:  15.23155139254834
-
-FID at 70000: 15.23155139254834
-Flip probability: 0.039862907138879994
-FID:  15.140548653907672
-
-FID at 70000: 15.140548653907672
-Flip probability: 0.039065648996102396
-FID:  15.076599039172663
-
-FID at 70000: 15.076599039172663
-Flip probability: 0.03828433601618035
-FID:  13.459348253589155
-
-FID at 80000: 13.459348253589155
-Flip probability: 0.03751864929585674
-FID:  14.138996936682815
-
-FID at 80000: 14.138996936682815
-Flip probability: 0.036768276309939604
-FID:  13.647989740892967
-
-FID at 80000: 13.647989740892967
-Flip probability: 0.03603291078374081
-FID:  13.968810430675887
-
-FID at 80000: 13.968810430675887
-Flip probability: 0.03531225256806599
-FID:  13.741638951001619
-
-FID at 90000: 13.741638951001619
-Flip probability: 0.03460600751670467
-FID:  6.517056112051193
-
-FID at 90000: 6.517056112051193
-Flip probability: 0.033913887366370576
-FID:  13.741719040013322
-
-FID at 90000: 13.741719040013322
-Flip probability: 0.03323560961904316
-FID at 90000: 13.741719040013322
-Flip probability: 0.0325708974266623
+Flip probability: 0.0415
+Warmup the dataloader for 0 steps
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mlilac-gorge-32[0m at: [34mhttps://wandb.ai/lily-falcon/GPT_H100/runs/s0pqdi86[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250212_090924-s0pqdi86/logs[0m

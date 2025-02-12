@@ -51,12 +51,12 @@ gpt:
 train:
   flip_prob: 0.0415 # TBD
   flip_decay: 0.98 # TBD
-  flip_decay_every: 10000 # TBD
-  warm_up_step: 92000
+  flip_decay_every: 5000 # TBD
+  warm_up_step: 0
   num_pred_bits:
   resume_path: /data-fast/large_682M_v1_decay0p98_2/GPT-GPT_H100-90k
   skipped_keys:
-  global_step: 90001
+  global_step: 89999
   exp_name: &exp_name 'GPT_H100'
   wandb_proj: *exp_name
   output_dir: '/data-fast/large_682M'
@@ -67,6 +67,7 @@ train:
   num_iters: 320000 # TBD
   save_every: 5000 # TBD
   val_every: 10000 # TBD
+  ori_path: '/data-fast/eval_images/assets/ori' # where the original images are stored
 
 data:
   path: '/checkpoint/data_gen_exp/datasets/imagenet/imagenet-train-{000000..001281}.tar'
