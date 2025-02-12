@@ -67,6 +67,7 @@ train:
   num_iters: 320000 # TBD
   save_every: 5000 # TBD
   val_every: 10000 # TBD
+  ori_path: 'eval_images/assets/ori' # where the original images are stored
 
 data:
   path: './datasets/imagenet/imagenet-train-{000000..001281}.tar'

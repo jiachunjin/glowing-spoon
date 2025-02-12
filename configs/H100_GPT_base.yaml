@@ -49,7 +49,7 @@ gpt:
   ffn_dim_multiplier:
 
 train:
-  flip_prob: 0.04 # TBD
+  flip_prob: 0.03 # TBD
   flip_decay: 0.99 # TBD
   flip_decay_every: 10000 # TBD
   warm_up_step: 2000
@@ -67,6 +67,7 @@ train:
   num_iters: 320000 # TBD
   save_every: 5000 # TBD
   val_every: 10000 # TBD
+  ori_path: 'eval_images/assets/ori' # where the original images are stored
 
 data:
   path: './datasets/imagenet/imagenet-train-{000000..001281}.tar'
