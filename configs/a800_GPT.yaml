@@ -66,9 +66,9 @@ train:
   flip_prob: 0.05
   flip_decay: 0.98
   flip_decay_every: 5000
-  warm_up_step: 0
+  warm_up_step: 100
   num_pred_bits:
-  resume_path: 'pretrained_ckpts/GPT-GPT_A800-200k'
+  resume_path: 'pretrained_models/gpt_1024x32/GPT-GPT_A800-320k'
   skipped_keys:
   global_step: 1
   exp_name: &exp_name 'GPT_A800'
@@ -79,11 +79,11 @@ train:
   gradient_accumulation_steps: 2 # change
   report_to: 'no' # change
   num_iters: 320000 # change
-  save_every: 5 # change
-  val_every: 5 # change
+  save_every: 50 # change
+  val_every: 50 # change
   ori_path: 'eval_images/assets/ori'
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
   # path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 1 # change
+  batch_size: 10 # change

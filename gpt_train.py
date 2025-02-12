@@ -210,17 +210,21 @@ def main(config_path):
 
                     with torch.no_grad():
                         for label in tqdm(labels):
-                            cond = torch.tensor([label]*50).to(accelerator.device)
-                            with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                                out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
-                            with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                                recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
-                                for id, rec in enumerate(recon_full):
-                                    rec = inverse_transform(rec)
-                                    rec.save(f'{output_dir}/gen/{rank}_{label}_{id}.png')
+                            img_id = 0
+                            for iter in range(5):
+                                cond = torch.tensor([label]*10).to(accelerator.device)
+                                with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                                    out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                                with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
+                                    recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
+                                    for rec in recon_full:
+                                        rec = inverse_transform(rec)
+                                        rec.save(f'{output_dir}/gen/{rank}_{label}_{img_id}.png')
+                                        img_id += 1
                     accelerator.wait_for_everyone()
 
                     if accelerator.is_main_process:
+                        torch.cuda.empty_cache()
                         import subprocess
                         assert len(os.listdir(os.path.join(output_dir, 'gen'))) == 50000, "the number of generated images is not correct"
                         command = [
@@ -245,6 +249,7 @@ def main(config_path):
                         accelerator.log(fid_log, step=global_step)
                         print(f'FID at {global_step}: {fid}')
                 accelerator.wait_for_everyone()
+                break
 
                 if global_step > 0 and global_step % config.train.flip_decay_every == 0:
                     flip_prob *= config.train.flip_decay
