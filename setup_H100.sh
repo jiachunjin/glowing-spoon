@@ -10,20 +10,20 @@ conda activate bingpt
 
 # Step 2: Install required packages
 echo "Installing required packages..."
-pip install accelerate==0.33.0 torchvision==0.19.1 webdataset omegaconf einops wandb opencv-python==4.1.2.30 pytorch-fid
+python3 -m pip install accelerate==0.33.0 torchvision==0.19.1 webdataset omegaconf einops wandb opencv-python==4.1.2.30 pytorch-fid
 
 # Step 3: Download ImageNet dataset (webdataset format)
 echo "Downloading ImageNet dataset..."
-huggingface-cli download --repo-type dataset --resume-download Cylarus/ImageNet --local-dir ./datasets/imagenet
+huggingface-cli download --repo-type dataset --resume-download Cylarus/ImageNet --local-dir /checkpoint/data_gen_exp/datasets/imagenet
 
 # Step 4: Download pretrained tokenizer
 echo "Downloading pretrained tokenizer ckpts..."
-huggingface-cli download orres/H100_ckpts --local-dir ./pretrained_ckpts
+huggingface-cli download orres/H100_ckpts --local-dir /checkpoint/data_gen_exp/pretrained_ckpts
 
 # Step 5: Download validation image
 echo "Downloading validation images..."
-huggingface-cli download orres/imagenet_val --local-dir ./eval_images/
-tar -xvf ./eval_images/assets_ori.tar -C ./eval_images
-mkdir ./eval_images/assets/gen
+huggingface-cli download orres/imagenet_val --local-dir /checkpoint/data_gen_exp/eval_images/
+tar -xvf /checkpoint/data_gen_exp/eval_images/assets_ori.tar -C /checkpoint/data_gen_exp/eval_images
+mkdir /checkpoint/data_gen_exp/eval_images/assets/gen
 
 echo "Setup done, ready to train!"

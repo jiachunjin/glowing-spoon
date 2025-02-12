@@ -24,8 +24,10 @@ EOT
 echo "Logging into Weights & Biases..."
 wandb login 1b6ebc9eb96be3356516f5c94e99a1a3dff4ecc6
 
+LOG_FILE=/code/users/lhu/workspace/glowing-spoon/logs/H100_GPT_L_decay0p98_2_10.log
+
 # Launch the training
 echo "Launching training..."
-accelerate launch --main_process_port 29508 gpt_train.py --config 'configs/H100_GPT_base.yaml'
+accelerate launch --main_process_port 29505 gpt_train.py --config 'configs/H100_GPT_L.yaml' | tee $LOG_FILE
 
 echo "Training complete!"

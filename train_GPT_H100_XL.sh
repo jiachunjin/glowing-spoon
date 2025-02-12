@@ -26,6 +26,6 @@ wandb login 1b6ebc9eb96be3356516f5c94e99a1a3dff4ecc6
 
 # Launch the training
 echo "Launching training..."
-accelerate launch --main_process_port 29508 gpt_train.py --config 'configs/H100_GPT_base.yaml'
+accelerate launch --main_process_port 29508 gpt_train.py --config 'configs/H100_GPT_XL.yaml'
 
 echo "Training complete!"

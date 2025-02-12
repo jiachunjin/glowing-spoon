@@ -212,15 +212,15 @@ def main(config_path):
                             recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
                             for id, rec in enumerate(recon_full):
                                 rec = inverse_transform(rec)
-                                rec.save(f'eval_images/assets/gen/{rank}_{label}_{id}.png')
+                                rec.save(f'/data-fast/data_gen_exp/eval_images/assets/gen/{rank}_{label}_{id}.png')
                 accelerator.wait_for_everyone()
 
                 if accelerator.is_main_process:
                     import subprocess
                     command = [
                         "python", "-m", "pytorch_fid",
-                        "eval_images/assets/ori",
-                        "eval_images/assets/gen",
+                        "/data-fast/data_gen_exp/eval_images/assets/ori",
+                        "/data-fast/data_gen_exp/eval_images/assets/gen",
                         "--device", "cuda:7"
                     ]
 
