@@ -2,6 +2,8 @@ import os
 import argparse
 import torch
 import torch.nn.functional as F
+import numpy as np
+import torchvision
 from tqdm.auto import tqdm
 from omegaconf import OmegaConf
 from accelerate import Accelerator
@@ -187,14 +189,13 @@ def main(config_path):
                 accelerator.wait_for_everyone()
 
                 if global_step > 0 and global_step % config.train.val_every == 0:
-                    from torchvision import transforms
+                    if accelerator.is_main_process:
+                        print(f'Evaluating FID ...')
+                    from evaluate.inception import InceptionV3
+                    from evaluate.compute_fid import compute_fid
                     from generate import generate_blockwise
+                    torch.cuda.empty_cache()
                     cfg_scale = 2
-                    # make a directory for generated images at output_dir/gen, exists_ok=True
-                    os.makedirs(os.path.join(output_dir, 'gen'), exist_ok=True)
-                    # if the directory exists, clear it
-                    os.system(f'rm -rf {os.path.join(output_dir, "gen")}/*')
-                    assert len(os.listdir(os.path.join(output_dir, 'gen'))) == 0, "the evaluation directory is not empty"
 
                     gpt.eval()
                     rank = accelerator.state.local_process_index
@@ -202,59 +203,33 @@ def main(config_path):
 
                     labels = torch.arange(rank, 1000, world_size).to(accelerator.device)
 
-                    inverse_transform = transforms.Compose([
-                        transforms.Normalize(mean=[-1, -1, -1], std=[2, 2, 2]),
-                        transforms.Lambda(lambda x: x.clamp(0, 1)),
-                        transforms.ToPILImage()
-                    ])
-
+                    pred_arr = torch.empty((len(labels) * 50, 2048), device=accelerator.device)
+                    start_idx = 0
+                    inception_model = InceptionV3([3]).to(accelerator.device)
+                    inception_model.eval()
                     with torch.no_grad():
                         for label in tqdm(labels):
-                            img_id = 0
-                            for iter in range(5):
-                                cond = torch.tensor([label]*10).to(accelerator.device)
-                                with torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                                    out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
-                                with torch.no_grad(), torch.autocast('cuda', enabled=True, dtype=torch.float16, cache_enabled=True):
-                                    recon_full = autoencoder.decode_bits(out, num_activated_latent=None)
-                                    for rec in recon_full:
-                                        rec = inverse_transform(rec)
-                                        rec.save(f'{output_dir}/gen/{rank}_{label}_{img_id}.png')
-                                        img_id += 1
+                            for _ in range(50 // config.train.val_batchsize): # smaller inference batchsize to avoid OOM
+                                cond = torch.tensor([label] * config.train.val_batchsize).to(accelerator.device)
+                                out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                                generations = autoencoder.decode_bits(out, num_activated_latent=None)
+                                generations = torch.clamp((generations + 1) / 2, 0, 1)
+
+                                pred = inception_model(generations)[0].squeeze(3).squeeze(2)
+                                pred_arr[start_idx : start_idx + pred.shape[0]] = pred
+                                start_idx = start_idx + pred.shape[0]
                     accelerator.wait_for_everyone()
-
+                    activations = accelerator.gather(pred_arr).cpu().numpy()
+                    mu_gen = np.mean(activations, axis=0)
+                    sigma_gen = np.cov(activations, rowvar=False)
                     if accelerator.is_main_process:
-                        torch.cuda.empty_cache()
-                        import subprocess
-                        assert len(os.listdir(os.path.join(output_dir, 'gen'))) == 50000, "the number of generated images is not correct"
-                        command = [
-                            "python", "-m", "pytorch_fid",
-                            f"{config.train.ori_path}",
-                            f"{output_dir}/gen",
-                            "--device", "cuda:0"
-                        ]
-
-                        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-                        last_line = None
-                        for line in process.stdout:
-                            print(line)
-                            last_line = line
-                        if last_line is not None:
-                            fid = float(last_line.split()[-1])
-                        else:
-                            fid = 0.0
-                        process.wait()
+                        fid = compute_fid(mu_gen, sigma_gen)
+                        print(f'FID: {fid}')
                         fid_log = {'FID': fid}
                         accelerator.log(fid_log, step=global_step)
-                        print(f'FID at {global_step}: {fid}')
-                accelerator.wait_for_everyone()
-                break
-
-                if global_step > 0 and global_step % config.train.flip_decay_every == 0:
-                    flip_prob *= config.train.flip_decay
-                    if accelerator.is_main_process:
-                        print(f'Flip probability: {flip_prob}')
+                    torch.cuda.empty_cache()
+                    accelerator.wait_for_everyone()
+                    
 
                 if global_step >= config.train.num_iters:
                     training_done = True
