@@ -4,7 +4,5 @@ GPT ckpt loaded from /data-fast/large_682M_v1_decay0p98_2/GPT-GPT_H100-90k
 Number of learnable parameters:  682787360
 Number of predicted tokens: 1024
 Flip probability: 0.0415
-Warmup the dataloader for 89999 steps
+Warmup the dataloader for 92000 steps
 Flip probability: 0.040670000000000005
-FID at 100000: 0.0
-Flip probability: 0.039856600000000006

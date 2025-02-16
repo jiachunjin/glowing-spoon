@@ -1,20 +1,9 @@
 total: true
 autoencoder:
   matryoshka: true
-  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/linear_1024_32_new/EMA-ae_total-6k'
   pretrained_ckpt_path: 'pretrained_models/rush1024x32/ema_6k_new'
-
-  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/ae_total/1024x32_hp5_decoderonly/AE-ae_total-5k'
-  # pretrained_ckpt_path: '/root/codebase/glowing-spoon/experiment/linear64_hp5/EMA-ae_total-5k'
-  # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_do_5k'
-  # pretrained_ckpt_path: 'pretrained_models/1024x32/ae_10k'
-  # pretrained_ckpt_path: 'pretrained_models/512x24/AE-ae_total-4k'
-  # pretrained_ckpt_path: 'pretrained_models/512x64/512x64_hp10'
   vae_dim: &vae_dim 256
-  # num_latents: &num_latents 512
   num_latents: &num_latents 1024
-  # binary_dim: &binary_dim 64
-  # binary_dim: &binary_dim 24
   binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
@@ -35,8 +24,6 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    # latents_mask_schedule: 'linear_64'
-    # latents_mask_schedule: 'linear_24'
     latents_mask_schedule: 'linear_1024_32'
 
 gpt:
@@ -64,26 +51,26 @@ gpt:
 
 train:
   flip_prob: 0.05
-  flip_decay: 0.98
-  flip_decay_every: 5000
+  flip_decay: 1
   warm_up_step: 0
   num_pred_bits:
-  resume_path: 'pretrained_ckpts/GPT-GPT_A800-200k'
+  resume_path: 'pretrained_models/gpt_1024x32/GPT-GPT_A800-285k'
   skipped_keys:
-  global_step: 1
+  global_step: 324999
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'tmmp'
+  output_dir: 'full_32k_cont'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
-  gradient_accumulation_steps: 2 # change
-  report_to: 'no' # change
-  num_iters: 320000 # change
-  save_every: 5 # change
-  val_every: 5 # change
-  ori_path: 'eval_images/assets/ori'
+  gradient_accumulation_steps: 1 # change
+  report_to: 'wandb' # change
+  num_iters: 400000 # change
+  save_every: 5000 # change
+  val_every: 5000 # change
+  val_batchsize: 25
+  # ori_path: 'eval_images/assets/ori'
 
 data:
   path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
   # path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 1 # change
+  batch_size: 16 # change

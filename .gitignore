@@ -12,4 +12,5 @@ check_wds.py
 eval_images/
 pretrained_ckpts/
 tmp.sh
+H100_*/
 *.tar

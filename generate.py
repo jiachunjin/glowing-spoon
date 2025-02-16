@@ -56,11 +56,11 @@ def prefill(gpt, cond_idx: torch.Tensor, input_pos: torch.Tensor, cfg_scale: flo
 def decode_n_tokens(gpt, cur_token, input_pos, num_new_tokens, cfg_scale, latent_mask, verbose=False):
     new_tokens, new_probs = [], []
     for i in trange(num_new_tokens, disable=verbose==False):
-        with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True): # Actually better for Inductor to codegen attention here
-            next_token = decode_one_token(gpt, cur_token, input_pos, cfg_scale, latent_mask)
-            input_pos += 1
-            new_tokens.append(next_token.clone())
-            cur_token = next_token
+        # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True): # Actually better for Inductor to codegen attention here
+        next_token = decode_one_token(gpt, cur_token, input_pos, cfg_scale, latent_mask)
+        input_pos += 1
+        new_tokens.append(next_token.clone())
+        cur_token = next_token
     
     return new_tokens, new_probs
 
