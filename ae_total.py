@@ -15,10 +15,12 @@ class AE_total(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        # mar encoder
-        self.encoder = Encoder(ch_mult=(1, 1, 2, 2, 4), z_channels=config.vae_dim)
+        # self.encoder = Encoder(ch_mult=(1, 1, 2, 2, 4), z_channels=config.vae_dim)
+        # self.quant_conv = torch.nn.Conv2d(2 * config.vae_dim, 2 * config.vae_dim, 1)
+        self.patch_size = 16
+        self.patch_embed = nn.Conv2d(in_channels=3, out_channels=config.vae_dim, kernel_size=self.patch_size, stride=self.patch_size, bias=True)
+
         self.decoder = Decoder(ch_mult=(1, 1, 2, 2, 4), z_channels=config.vae_dim)
-        self.quant_conv = torch.nn.Conv2d(2 * config.vae_dim, 2 * config.vae_dim, 1)
         self.post_quant_conv = torch.nn.Conv2d(config.vae_dim, config.vae_dim, 1)
         # 1d autoencoder
         self.encoder_1d = Encoder_1D(config.encoder_1d)
@@ -31,8 +33,8 @@ class AE_total(nn.Module):
         # self.quant_conv.requires_grad_(False)
         # self.encoder_1d.requires_grad_(False)
         # self.decoder_1d.requires_grad_(False)
-        # self.post_quant_conv.requires_grad_(False)
-        # self.decoder.requires_grad_(False)
+        self.post_quant_conv.requires_grad_(False)
+        self.decoder.requires_grad_(False)
     
     def _init_from_ckpt(self, config):
         if config.outer_ckpt is not None:
@@ -51,10 +53,11 @@ class AE_total(nn.Module):
             self.load_state_dict(sd, strict=False)
 
     def get_feature_1d(self, x_BCHW):
-        h = self.encoder(x_BCHW)
-        moments = self.quant_conv(h)
-        posterior = DiagonalGaussianDistribution(moments)
-        feature_map = posterior.mode()
+        feature_map = self.patch_embed(x_BCHW) # (b, vae_dim, 16, 16)
+        # h = self.encoder(x_BCHW)
+        # moments = self.quant_conv(h)
+        # posterior = DiagonalGaussianDistribution(moments)
+        # feature_map = posterior.mode()
 
         return rearrange(feature_map, 'b c h w -> b (h w) c')
     
@@ -80,16 +83,16 @@ class AE_total(nn.Module):
 
         return recon
 
-    def forward_decoder_only(self, x_BCHW):
-        # with torch.no_grad():
-        feature_1d = self.get_feature_1d(x_BCHW)
-        latents = self.encoder_1d(feature_1d)
-        feature_1d_recon = self.decoder_1d(latents, num_activated_latent=self.config.num_latents)
-        z = rearrange(feature_1d_recon, 'b (h w) c -> b c h w', h=16)
-        z = self.post_quant_conv(z)
-        recon = self.decoder(z)
+    # def forward_decoder_only(self, x_BCHW):
+    #     # with torch.no_grad():
+    #     feature_1d = self.get_feature_1d(x_BCHW)
+    #     latents = self.encoder_1d(feature_1d)
+    #     feature_1d_recon = self.decoder_1d(latents, num_activated_latent=self.config.num_latents)
+    #     z = rearrange(feature_1d_recon, 'b (h w) c -> b c h w', h=16)
+    #     z = self.post_quant_conv(z)
+    #     recon = self.decoder(z)
 
-        return recon
+    #     return recon
 
     @torch.no_grad()
     def get_probs_and_bits(self, x_BCHW, latent_mask=None):

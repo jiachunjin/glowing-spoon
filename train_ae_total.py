@@ -86,6 +86,10 @@ def main(config_path):
     
     autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc = accelerator.prepare(autoencoder, hybrid_loss, dataloader, optimizer, optimizer_disc)
 
+    from adv_loss.lpips import LPIPS
+    p_loss = LPIPS().eval()
+    p_loss = p_loss.to(accelerator.device)
+
     if accelerator.is_main_process:
         ema = EMA(autoencoder.module, decay=0.999)
 
@@ -113,7 +117,6 @@ def main(config_path):
             hybrid_loss.train()
             with accelerator.accumulate([autoencoder, hybrid_loss]):
                 recon_full, recon_matryoshka = autoencoder(x)
-                # recon_full = autoencoder.module.forward_decoder_only(x)
                 # --------------------- optimize autoencoder ---------------------
                 loss_gen = hybrid_loss(
                     inputs          = x,
@@ -123,8 +126,8 @@ def main(config_path):
                     last_layer      = autoencoder.module.decoder.last_layer
                 )
 
-                loss_matryoshka = F.mse_loss(recon_matryoshka, x, reduction='mean')
-                # loss_matryoshka = 0
+                # loss_matryoshka = 0.5 * F.mse_loss(x, recon_matryoshka, reduction='mean') + 1.5 * p_loss(x, recon_matryoshka).mean()
+                loss_matryoshka = p_loss(x, recon_matryoshka).mean()
 
                 optimizer.zero_grad()
                 accelerator.backward(loss_gen + config.train.hp_matryoshka * loss_matryoshka)

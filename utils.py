@@ -153,6 +153,50 @@ def get_latents_mask(num_latents, input_dim, schedule):
             start = i * block_size
             end = (i + 1) * block_size
             mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == '4_to_32':
+        num_blocks = 64
+        block_size = 8
+        max_bits = 32
+        min_bits = 4
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(min_bits, max_bits, num_blocks)).astype(int)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == '2_to_32':
+        num_blocks = 64
+        block_size = 8
+        max_bits = 32
+        min_bits = 2
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(min_bits, max_bits, num_blocks)).astype(int)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == '1_to_32_768':
+        num_blocks = 48
+        block_size = 16
+        max_bits = 32
+        min_bits = 1
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(min_bits, max_bits, num_blocks)).astype(int)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
+    elif schedule == '1_to_16_512':
+        num_blocks = 32
+        block_size = 16
+        max_bits = 16
+        min_bits = 1
+        mask = torch.zeros(num_blocks*block_size, max_bits)
+        num_activated_bits = np.ceil(np.linspace(min_bits, max_bits, num_blocks)).astype(int)
+        for i in range(num_blocks):
+            start = i * block_size
+            end = (i + 1) * block_size
+            mask[start:end, :num_activated_bits[i]] = 1
     elif schedule == 'linear_1024_36':
         num_blocks = 64
         block_size = 16

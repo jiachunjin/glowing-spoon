@@ -1,9 +1,14 @@
 total: true
 autoencoder:
   matryoshka: true
-  pretrained_ckpt_path: 'pretrained_models/rush1024x32/ema_6k_new'
+  # pretrained_ckpt_path: 'pretrained_models/rush1024x32/ema_6k_new'
+  pretrained_ckpt_path: 'experiment/AE_165-245_hp5/EMA-ae_total-20k'
   vae_dim: &vae_dim 256
-  num_latents: &num_latents 1024
+  # num_latents: &num_latents 1024
+  # binary_dim: &binary_dim 32
+  # num_latents: &num_latents 512
+  # binary_dim: &binary_dim 32
+  num_latents: &num_latents 768
   binary_dim: &binary_dim 32
   outer_ckpt:
   inner_ckpt:
@@ -17,6 +22,7 @@ autoencoder:
     output_dim: *binary_dim
 
   decoder_1d:
+    block_size: 16
     binary_mode: true
     vae_dim: *vae_dim
     embed_dim: 512
@@ -24,7 +30,8 @@ autoencoder:
     num_latents: *num_latents
     num_heads: 8
     input_dim: *binary_dim
-    latents_mask_schedule: 'linear_1024_32'
+    latents_mask_schedule: '1_to_32_768'
+    # latents_mask_schedule: 'linear_1024_32'
 
 gpt:
   independent_projection: false
@@ -54,23 +61,23 @@ train:
   flip_decay: 1
   warm_up_step: 0
   num_pred_bits:
-  resume_path: 'pretrained_models/gpt_1024x32/GPT-GPT_A800-285k'
-  skipped_keys:
-  global_step: 324999
+  resume_path: 'experiment/2to32_165-245_ponly/GPT-GPT_A800-190k'
+  skipped_keys: ['pos_embedding', 'mask']
+  global_step: 0
   exp_name: &exp_name 'GPT_A800'
   wandb_proj: *exp_name
-  output_dir: 'full_32k_cont'
+  output_dir: 'GPT_165-245_hp5_768'
   logging_dir: 'logs'
   mixed_precision: 'bf16'
   gradient_accumulation_steps: 1 # change
   report_to: 'wandb' # change
-  num_iters: 400000 # change
-  save_every: 5000 # change
-  val_every: 5000 # change
+  num_iters: 100000 # change
+  save_every: 10000 # change
+  val_every: -1 # change
   val_batchsize: 25
   # ori_path: 'eval_images/assets/ori'
 
 data:
-  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000000..001281}.tar'
-  # path: '/root/data/imagenet/imagenet-train-{000000..001281}.tar'
-  batch_size: 16 # change
+  path: '/data/Largedata/ImageNet_wds/imagenet-train-{000165..000245}.tar'
+  # path: '/root/data/imagenet/imagenet-train-{000165..000245}.tar'
+  batch_size: 20 # change

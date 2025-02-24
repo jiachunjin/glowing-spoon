@@ -316,21 +316,22 @@ class Decoder_1D_Matryoshka(nn.Module):
         mask_tokens = self.mask_tokens.repeat(256, 1).unsqueeze(0).expand(B, -1, -1)
         mask_tokens = mask_tokens + self.pos_embed_full.to(mask_tokens.device, dtype)
 
-        latent_len = K
+        block_size = self.config.block_size
+        latent_len = K // block_size
         num_mask_token = self.recon_length
         if self.training:
             if num_activated_latent is None:
-                num_activated_latent = torch.randint(1, latent_len+1, (B,), device=latents_BKd.device)
+                num_activated_block = torch.randint(1, latent_len, (B,), device=latents_BKd.device)
+                num_activated_latent = num_activated_block * block_size
             else:
                 num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
             # assert num_activated_latent is None, 'num_activated_latent should be None in training mode'
             # num_activated_latent = torch.randint(1, latent_len+1, (B,))
         else:
             if num_activated_latent is None:
-                num_activated_latent = torch.tensor(latent_len).repeat(B).to(latents_BKd.device)
+                num_activated_latent = torch.tensor(K).repeat(B).to(latents_BKd.device)
             else:
                 num_activated_latent = torch.tensor(num_activated_latent).repeat(B).to(latents_BKd.device)
-            # print("Inference mode", num_activated_latent[0].item())
         L = num_mask_token + K
         attn_mask = torch.full((B, 1, L, L), float('-inf')).to(mask_tokens.device, dtype)
         attn_mask[:, :, :num_mask_token, :num_mask_token] = 0

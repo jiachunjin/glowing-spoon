@@ -182,13 +182,13 @@ def main(config_path):
                 accelerator.log(logs, step=global_step)
                 progress_bar.set_postfix(**logs)
 
-                if global_step > 0 and global_step % config.train.save_every == 0 and accelerator.is_main_process:
+                if global_step % config.train.save_every == 0 and accelerator.is_main_process:
                     gpt.eval()
                     state_dict = accelerator.unwrap_model(gpt).state_dict()
                     torch.save(state_dict, os.path.join(output_dir, f"GPT-{config.train.exp_name}-{global_step // 1000}k"))
                 accelerator.wait_for_everyone()
 
-                if global_step > 0 and global_step % config.train.val_every == 0:
+                if config.train.val_every > 0 and global_step % config.train.val_every == 0:
                     if accelerator.is_main_process:
                         print(f'Evaluating FID ...')
                     from evaluate.inception import InceptionV3
@@ -211,7 +211,7 @@ def main(config_path):
                         for label in tqdm(labels):
                             for _ in range(50 // config.train.val_batchsize): # smaller inference batchsize to avoid OOM
                                 cond = torch.tensor([label] * config.train.val_batchsize).to(accelerator.device)
-                                out = generate_blockwise(gpt.module, cond, 1024, cfg_scale, latent_mask, accelerator.device, verbose=False)
+                                out = generate_blockwise(gpt.module, cond, 512, cfg_scale, latent_mask, accelerator.device, verbose=False)
                                 generations = autoencoder.decode_bits(out, num_activated_latent=None)
                                 generations = torch.clamp((generations + 1) / 2, 0, 1)
 
@@ -229,7 +229,6 @@ def main(config_path):
                         accelerator.log(fid_log, step=global_step)
                     torch.cuda.empty_cache()
                     accelerator.wait_for_everyone()
-                    
 
                 if global_step >= config.train.num_iters:
                     training_done = True
